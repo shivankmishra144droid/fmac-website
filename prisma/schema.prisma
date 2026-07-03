@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MovieCategory {
+  MOVIE
+  SHORT
+  DOCUMENTARY
+  EXPERIMENTAL
+}
+
+enum ContentType {
+  FILM
+  AAJA
+  FRESHERS
+}
+
+model Movie {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  tagline         String?
+  description     String?
+  synopsis        String?
+  releaseYear     Int
+  posterUrl       String?
+  thumbnailUrl    String?
+  youtubeId       String?       @unique
+  youtubeUrl      String?
+  publishedAt     DateTime?
+  category        MovieCategory @default(SHORT)
+  contentType     ContentType   @default(FILM)
+  runtimeSeconds  Int?
+  format          String?
+  crew            String?
+  isLatestRelease Boolean       @default(false)
+  isFmacSelect    Boolean       @default(false)
+  isAajaFilm      Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([releaseYear])
+  @@index([isLatestRelease])
+  @@index([youtubeId])
+  @@index([category])
+  @@index([contentType])
+  @@index([publishedAt])
+  @@index([isAajaFilm])
+}
+
+enum AdminRole {
+  ADMIN
+}
+
+model AdminUser {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  hashedPassword String
+  role           AdminRole @default(ADMIN)
+  createdAt      DateTime  @default(now())
+}
+
+model LocationInfo {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  mapEmbedUrl String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  title       String
+  year        Int
+  description String?
+  laurel      String?
+  movieTitle  String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}

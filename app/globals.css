@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #0b0906;
+  color: #efe6d3;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+  /* Warm near-black base with a faint off-center glow so it never reads as flat black. */
+  background-image:
+    radial-gradient(
+      120% 90% at 50% -10%,
+      rgba(58, 42, 20, 0.55) 0%,
+      rgba(20, 15, 9, 0.4) 38%,
+      rgba(8, 6, 4, 1) 78%
+    );
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Accessible, visible focus ring for keyboard users across the whole app. */
+:focus-visible {
+  outline: 2px solid #f6c453;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Thin custom scrollbar to match the theatre theme. */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0906;
+}
+::-webkit-scrollbar-thumb {
+  background: #241b10;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a2c19;
+}
+
+/* Dust motes drifting up inside the projector beam. --dx is set per particle. */
+@keyframes dust-drift {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.55;
+  }
+  88% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-130px) translateX(var(--dx, 10px));
+    opacity: 0;
+  }
+}
+
+@layer components {
+  .film-title {
+    font-family: var(--font-display), Impact, sans-serif;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+
+  .type-eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.64rem;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .type-meta {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  .type-display-heading {
+    font-family: var(--font-display), Impact, sans-serif;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+
+  .social-nav-link {
+    position: relative;
+    display: inline-flex;
+    color: rgba(234, 179, 8, 0.65);
+    transition: color 150ms ease-out, transform 150ms ease-out;
+    animation: social-glow 2.8s ease-in-out infinite;
+  }
+
+  .social-nav-link:hover {
+    color: #eab308;
+    transform: scale(1.1);
+    animation: social-glow-intense 1.6s ease-in-out infinite;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .library-scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .library-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes hero-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes social-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.35))
+      drop-shadow(0 0 6px rgba(234, 179, 8, 0.12));
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(234, 179, 8, 0.65))
+      drop-shadow(0 0 14px rgba(234, 179, 8, 0.28));
+  }
+}
+
+@keyframes social-glow-intense {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.7))
+      drop-shadow(0 0 12px rgba(234, 179, 8, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.95))
+      drop-shadow(0 0 22px rgba(234, 179, 8, 0.5));
+  }
+}
+
+/* Honour reduced-motion: freeze all decorative animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .social-nav-link {
+    filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.35));
+  }
+}

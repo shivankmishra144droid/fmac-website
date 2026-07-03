@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fmac_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fmac
+      POSTGRES_PASSWORD: fmac_dev_password
+      POSTGRES_DB: fmac
+    ports:
+      - "5432:5432"
+    volumes:
+      - fmac_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fmac -d fmac"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fmac_pgdata:
