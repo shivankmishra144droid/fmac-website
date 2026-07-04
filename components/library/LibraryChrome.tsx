@@ -8,7 +8,7 @@ export function LibraryTopBar() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0a0a0a]/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/library" className="type-display-heading text-display-sm tracking-display text-white transition-colors hover:text-marquee">
+        <Link href="/" className="type-display-heading text-display-sm tracking-display text-white transition-colors hover:text-marquee">
           FMAC
         </Link>
         <div className="flex items-center gap-3 sm:gap-4">
