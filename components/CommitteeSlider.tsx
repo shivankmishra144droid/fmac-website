@@ -12,7 +12,9 @@ import { COMMITTEE_PHOTOS } from "@/lib/committeePhotos";
 import { OdometerYearLabel } from "@/components/OdometerYearLabel";
 import { ProjectorRig } from "@/components/ProjectorRig";
 import { ProjectorSliderBeam } from "@/components/ProjectorSliderBeam";
+import { ProjectorSoundToggle } from "@/components/ProjectorSoundToggle";
 import { TiltPhoto } from "@/components/TiltPhoto";
+import { useProjectorSound } from "@/hooks/useProjectorSound";
 import {
   FILM_FLICKER_OPACITY,
   FILM_FLICKER_S,
@@ -73,17 +75,24 @@ export function CommitteeSlider() {
   const [paused, setPaused] = useState(false);
   const [pressingArrow, setPressingArrow] = useState<"prev" | "next" | null>(null);
   const [gatePulse, setGatePulse] = useState(0);
-  const [transitioning, setTransitioning] = useState(false);
-  const [reelChanging, setReelChanging] = useState(false);
   const [phase, setPhase] = useState<TransitionPhase>("idle");
   const [frameHeight, setFrameHeight] = useState(0);
 
   const indexRef = useRef(0);
   const phaseRef = useRef<TransitionPhase>("idle");
   const slideStartRef = useRef(Date.now());
+  const sectionRef = useRef<HTMLElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const progressRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const {
+    muted,
+    toggleMuted,
+    showEnablePrompt,
+    dismissEnablePrompt,
+    playReelCatch,
+  } = useProjectorSound(sectionRef);
 
   const active = photos[index]!;
   const disableTilt = Boolean(reduceMotion) || lowPower;
@@ -132,16 +141,13 @@ export function CommitteeSlider() {
       if (normalized === indexRef.current || phaseRef.current !== "idle") return;
 
       clearTimers();
-      setTransitioning(true);
-      setReelChanging(true);
       paintProgress(0, indexRef.current);
+      playReelCatch();
 
       if (reduceMotion) {
         setIndex(normalized);
         slideStartRef.current = Date.now();
         paintProgress(0, normalized);
-        setTransitioning(false);
-        setReelChanging(false);
         return;
       }
 
@@ -156,13 +162,11 @@ export function CommitteeSlider() {
       schedule(() => setPhase("punch"), 220);
       schedule(() => {
         setPhase("idle");
-        setTransitioning(false);
-        setReelChanging(false);
         slideStartRef.current = Date.now();
         paintProgress(0, normalized);
       }, 380);
     },
-    [count, paintProgress, reduceMotion]
+    [count, paintProgress, playReelCatch, reduceMotion]
   );
 
   const next = useCallback(() => goTo(indexRef.current + 1), [goTo]);
@@ -206,6 +210,7 @@ export function CommitteeSlider() {
 
   return (
     <section
+      ref={sectionRef}
       className="relative z-10 border-t border-white/[0.06] px-5 pt-12 sm:px-8 sm:pt-16"
       aria-roledescription="carousel"
       aria-label="Coordinating Committee photos by year"
@@ -224,7 +229,8 @@ export function CommitteeSlider() {
           </h2>
         </div>
 
-        <div className="mb-4 flex gap-1" role="group" aria-label="Slide progress">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 gap-1" role="group" aria-label="Slide progress">
           {photos.map((photo, i) => (
             <button
               key={photo.year}
@@ -243,6 +249,14 @@ export function CommitteeSlider() {
               />
             </button>
           ))}
+          </div>
+          <ProjectorSoundToggle
+            muted={muted}
+            onToggle={toggleMuted}
+            showEnablePrompt={showEnablePrompt}
+            onDismissPrompt={dismissEnablePrompt}
+            className="shrink-0"
+          />
         </div>
 
         {/* Projector rig + beam + photo */}
@@ -255,8 +269,8 @@ export function CommitteeSlider() {
           {motionOn && (
             <div className="pointer-events-none absolute left-0 top-0 z-20 h-[4.5rem] w-[3.25rem] md:hidden">
               <ProjectorRig
+                placeholder
                 reduceMotion={false}
-                reelChanging={reelChanging}
                 transitionPhase={phase}
                 className="h-full w-full"
               />
@@ -267,8 +281,8 @@ export function CommitteeSlider() {
           <div className="relative z-10 hidden w-[17%] max-w-[148px] shrink-0 items-center justify-end pr-2 md:flex">
             <div className="aspect-[3/4] w-full max-h-[min(240px,36vh)]">
               <ProjectorRig
+                placeholder
                 reduceMotion={!motionOn}
-                reelChanging={reelChanging}
                 transitionPhase={phase}
                 className="h-full w-full"
               />
