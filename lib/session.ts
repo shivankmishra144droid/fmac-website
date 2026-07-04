@@ -4,7 +4,7 @@ import {
   SESSION_COOKIE,
   verifySession,
   type AdminSession,
-} from "./auth";
+} from "./auth-session";
 
 /** Read + verify the admin session from the request cookies. */
 export async function getSession(): Promise<AdminSession | null> {
