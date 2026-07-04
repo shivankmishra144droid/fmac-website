@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PROJECTOR_SOUND_PATHS } from "@/lib/projector-layout";
+
+const PROJECTOR_SOUND_PATHS = {
+  winding: { mp3: "/sounds/reel-winding.mp3", ogg: "/sounds/reel-winding.ogg" },
+  catch: { mp3: "/sounds/reel-catch.mp3", ogg: "/sounds/reel-catch.ogg" },
+} as const;
 
 const MUTE_KEY = "fmac-projector-sound-muted";
 const AMBIENT_PLAYED_KEY = "fmac-projector-ambient-played";

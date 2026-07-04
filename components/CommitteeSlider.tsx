@@ -10,7 +10,7 @@ import {
 import { motion, useReducedMotion, type PanInfo } from "framer-motion";
 import { COMMITTEE_PHOTOS } from "@/lib/committeePhotos";
 import { OdometerYearLabel } from "@/components/OdometerYearLabel";
-import { ProjectorRig } from "@/components/ProjectorRig";
+import { ProjectorIcon } from "@/components/ProjectorIcon";
 import { ProjectorSliderBeam } from "@/components/ProjectorSliderBeam";
 import { ProjectorSoundToggle } from "@/components/ProjectorSoundToggle";
 import { TiltPhoto } from "@/components/TiltPhoto";
@@ -268,24 +268,14 @@ export function CommitteeSlider() {
           {/* Mobile: compact projector top-left */}
           {motionOn && (
             <div className="pointer-events-none absolute left-0 top-0 z-20 h-[4.5rem] w-[3.25rem] md:hidden">
-              <ProjectorRig
-                placeholder
-                reduceMotion={false}
-                transitionPhase={phase}
-                className="h-full w-full"
-              />
+              <ProjectorIcon animate className="h-full w-full" />
             </div>
           )}
 
           {/* Desktop: projector column */}
           <div className="relative z-10 hidden w-[17%] max-w-[148px] shrink-0 items-center justify-end pr-2 md:flex">
             <div className="aspect-[3/4] w-full max-h-[min(240px,36vh)]">
-              <ProjectorRig
-                placeholder
-                reduceMotion={!motionOn}
-                transitionPhase={phase}
-                className="h-full w-full"
-              />
+              <ProjectorIcon animate={motionOn} className="h-full w-full" />
             </div>
           </div>
 
