@@ -7,44 +7,22 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-  type PanInfo,
-  type Variants,
-} from "framer-motion";
+import { motion, useReducedMotion, type PanInfo } from "framer-motion";
 import { COMMITTEE_PHOTOS } from "@/lib/committeePhotos";
 import { OdometerYearLabel } from "@/components/OdometerYearLabel";
+import { ProjectorRig } from "@/components/ProjectorRig";
+import { ProjectorSliderBeam } from "@/components/ProjectorSliderBeam";
 import { TiltPhoto } from "@/components/TiltPhoto";
+import {
+  FILM_FLICKER_OPACITY,
+  FILM_FLICKER_S,
+  PROJECTOR_JUDDER_PHOTO,
+} from "@/lib/projector-timing";
 
 const AUTO_MS = 5500;
-const FRAME_EXIT_S = 0.09;
-const FRAME_ENTER_S = 0.13;
 const GATE_EASE = [0.55, 0.06, 0.68, 0.19] as const;
 
-/** GPU-only shell transition — opacity + transform, no filter */
-const filmAdvanceVariants: Variants = {
-  enter: { opacity: 0, y: -12, scale: 1.004 },
-  center: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: FRAME_ENTER_S, ease: [0.16, 1, 0.3, 1], delay: 0.06 },
-  },
-  exit: {
-    opacity: 0,
-    y: 14,
-    scale: 0.998,
-    transition: { duration: FRAME_EXIT_S, ease: GATE_EASE },
-  },
-};
-
-const reducedVariants: Variants = {
-  enter: { opacity: 0 },
-  center: { opacity: 1, transition: { duration: 0.12 } },
-  exit: { opacity: 0, transition: { duration: 0.1 } },
-};
+type TransitionPhase = "idle" | "flicker" | "black" | "leader" | "punch";
 
 function useLowPowerFallback() {
   const [lowPower, setLowPower] = useState(false);
@@ -70,9 +48,24 @@ function useLowPowerFallback() {
   return lowPower;
 }
 
+function useMobileLayout() {
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  return mobile;
+}
+
 export function CommitteeSlider() {
   const reduceMotion = useReducedMotion();
   const lowPower = useLowPowerFallback();
+  const isMobile = useMobileLayout();
   const photos = COMMITTEE_PHOTOS;
   const count = photos.length;
 
@@ -81,17 +74,23 @@ export function CommitteeSlider() {
   const [pressingArrow, setPressingArrow] = useState<"prev" | "next" | null>(null);
   const [gatePulse, setGatePulse] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
+  const [reelChanging, setReelChanging] = useState(false);
+  const [phase, setPhase] = useState<TransitionPhase>("idle");
   const [frameHeight, setFrameHeight] = useState(0);
 
   const indexRef = useRef(0);
+  const phaseRef = useRef<TransitionPhase>("idle");
   const slideStartRef = useRef(Date.now());
   const frameRef = useRef<HTMLDivElement>(null);
   const progressRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const active = photos[index]!;
   const disableTilt = Boolean(reduceMotion) || lowPower;
+  const motionOn = !reduceMotion;
 
   indexRef.current = index;
+  phaseRef.current = phase;
 
   useEffect(() => {
     const el = frameRef.current;
@@ -103,6 +102,12 @@ export function CommitteeSlider() {
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   const paintProgress = useCallback((progress: number, activeIdx: number) => {
     progressRefs.current.forEach((bar, i) => {
       if (!bar) return;
@@ -111,16 +116,51 @@ export function CommitteeSlider() {
     });
   }, []);
 
+  const clearTimers = () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  };
+
+  const schedule = (fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms);
+    timersRef.current.push(id);
+  };
+
   const goTo = useCallback(
     (nextIndex: number) => {
       const normalized = ((nextIndex % count) + count) % count;
-      if (normalized === indexRef.current) return;
+      if (normalized === indexRef.current || phaseRef.current !== "idle") return;
+
+      clearTimers();
       setTransitioning(true);
-      setIndex(normalized);
-      slideStartRef.current = Date.now();
-      paintProgress(0, normalized);
-      if (!reduceMotion) setGatePulse((n) => n + 1);
-      window.setTimeout(() => setTransitioning(false), 380);
+      setReelChanging(true);
+      paintProgress(0, indexRef.current);
+
+      if (reduceMotion) {
+        setIndex(normalized);
+        slideStartRef.current = Date.now();
+        paintProgress(0, normalized);
+        setTransitioning(false);
+        setReelChanging(false);
+        return;
+      }
+
+      setPhase("flicker");
+
+      schedule(() => setPhase("black"), 70);
+      schedule(() => {
+        setIndex(normalized);
+        setGatePulse((n) => n + 1);
+        setPhase("leader");
+      }, 130);
+      schedule(() => setPhase("punch"), 220);
+      schedule(() => {
+        setPhase("idle");
+        setTransitioning(false);
+        setReelChanging(false);
+        slideStartRef.current = Date.now();
+        paintProgress(0, normalized);
+      }, 380);
     },
     [count, paintProgress, reduceMotion]
   );
@@ -136,19 +176,17 @@ export function CommitteeSlider() {
 
     let raf = 0;
     const tick = () => {
-      if (!paused && !transitioning) {
+      if (!paused && phaseRef.current === "idle") {
         const elapsed = Date.now() - slideStartRef.current;
         const p = Math.min(elapsed / AUTO_MS, 1);
         paintProgress(p, indexRef.current);
-        if (elapsed >= AUTO_MS) {
-          next();
-        }
+        if (elapsed >= AUTO_MS) next();
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [reduceMotion, paused, transitioning, next, paintProgress, index]);
+  }, [reduceMotion, paused, next, paintProgress, index]);
 
   function onSwipeEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
     if (reduceMotion) return;
@@ -165,8 +203,6 @@ export function CommitteeSlider() {
     slideStartRef.current = Date.now();
     paintProgress(0, indexRef.current);
   }
-
-  const variants = reduceMotion ? reducedVariants : filmAdvanceVariants;
 
   return (
     <section
@@ -209,78 +245,169 @@ export function CommitteeSlider() {
           ))}
         </div>
 
-        <div className="relative mx-auto w-full shadow-[0_22px_38px_rgba(0,0,0,0.55),0_0_32px_rgba(234,179,8,0.08)]">
-          <div
-            ref={frameRef}
-            className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
-          >
-            <AnimatePresence mode="wait" initial={false}>
+        {/* Projector rig + beam + photo */}
+        <div className="relative flex flex-col md:flex-row md:items-stretch">
+          {motionOn && (
+            <ProjectorSliderBeam mobile={isMobile} className="z-0" />
+          )}
+
+          {/* Mobile: compact projector top-left */}
+          {motionOn && (
+            <div className="pointer-events-none absolute left-0 top-0 z-20 h-[4.5rem] w-[3.25rem] md:hidden">
+              <ProjectorRig
+                reduceMotion={false}
+                reelChanging={reelChanging}
+                transitionPhase={phase}
+                className="h-full w-full"
+              />
+            </div>
+          )}
+
+          {/* Desktop: projector column */}
+          <div className="relative z-10 hidden w-[17%] max-w-[148px] shrink-0 items-center justify-end pr-2 md:flex">
+            <div className="aspect-[3/4] w-full max-h-[min(240px,36vh)]">
+              <ProjectorRig
+                reduceMotion={!motionOn}
+                reelChanging={reelChanging}
+                transitionPhase={phase}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
+
+          {/* Projected photo */}
+          <div className="relative z-[1] min-w-0 flex-1 shadow-[0_22px_38px_rgba(0,0,0,0.55),0_0_32px_rgba(234,179,8,0.08)]">
+            <div
+              ref={frameRef}
+              className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
+            >
               <motion.div
-                key={active.year}
                 className="absolute inset-0"
-                variants={variants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                style={{ willChange: transitioning ? "transform, opacity" : "auto" }}
+                animate={
+                  !motionOn
+                    ? undefined
+                    : phase === "punch"
+                      ? { scale: [1.045, 1], opacity: 1 }
+                      : phase === "idle"
+                        ? PROJECTOR_JUDDER_PHOTO.animate
+                        : undefined
+                }
+                transition={
+                  phase === "punch"
+                    ? { duration: 0.16, ease: [0.16, 1, 0.3, 1] }
+                    : PROJECTOR_JUDDER_PHOTO.transition
+                }
+                style={{
+                  willChange:
+                    motionOn && (phase === "idle" || phase === "punch")
+                      ? "transform"
+                      : undefined,
+                }}
               >
                 <TiltPhoto
+                  key={active.year}
                   src={active.imageUrl}
                   alt={active.alt}
                   foregroundSrc={active.foregroundUrl}
                   priority
-                  disableTilt={disableTilt}
+                  disableTilt={disableTilt || phase !== "idle"}
                   kenBurnsMs={AUTO_MS}
                 />
+                {motionOn && phase === "idle" && (
+                  <motion.div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 z-[4] bg-beam-soft mix-blend-soft-light"
+                    animate={{
+                      opacity: [...FILM_FLICKER_OPACITY].map((v) => (1 - v) * 0.14),
+                    }}
+                    transition={{
+                      duration: FILM_FLICKER_S,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    style={{ willChange: "opacity" }}
+                  />
+                )}
               </motion.div>
-            </AnimatePresence>
 
-            {!reduceMotion && <FilmGateLine key={gatePulse} travel={frameHeight} />}
+              {motionOn && phase === "flicker" && <FlickerOverlay />}
+              {motionOn && phase === "black" && (
+                <div className="pointer-events-none absolute inset-0 z-50 bg-ink" />
+              )}
+              {motionOn && phase === "leader" && <LeaderFlash />}
+              {motionOn && phase === "leader" && (
+                <FilmGateLine key={gatePulse} travel={frameHeight} />
+              )}
 
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-ink via-ink/15 to-ink/10 opacity-75"
-            />
-
-            {!reduceMotion && (
-              <motion.div
-                className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.14}
-                dragMomentum={false}
-                onDragEnd={onSwipeEnd}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-ink via-ink/15 to-ink/10 opacity-75"
               />
-            )}
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4 pt-20 sm:px-6 sm:pb-5">
-              <OdometerYearLabel
-                year={active.year}
+              {motionOn && (
+                <motion.div
+                  className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.14}
+                  dragMomentum={false}
+                  onDragEnd={onSwipeEnd}
+                />
+              )}
+
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4 pt-20 sm:px-6 sm:pb-5">
+                <OdometerYearLabel
+                  year={active.year}
+                  reduceMotion={Boolean(reduceMotion)}
+                  className="type-display-heading text-xl tracking-display text-parchment sm:text-display-sm"
+                />
+              </div>
+
+              <NavArrow
+                direction="prev"
+                onClick={prev}
+                pressing={pressingArrow === "prev"}
+                onPressStart={() => setPressingArrow("prev")}
+                onPressEnd={() => setPressingArrow(null)}
                 reduceMotion={Boolean(reduceMotion)}
-                className="type-display-heading text-xl tracking-display text-parchment sm:text-display-sm"
+              />
+              <NavArrow
+                direction="next"
+                onClick={next}
+                pressing={pressingArrow === "next"}
+                onPressStart={() => setPressingArrow("next")}
+                onPressEnd={() => setPressingArrow(null)}
+                reduceMotion={Boolean(reduceMotion)}
               />
             </div>
-
-            <NavArrow
-              direction="prev"
-              onClick={prev}
-              pressing={pressingArrow === "prev"}
-              onPressStart={() => setPressingArrow("prev")}
-              onPressEnd={() => setPressingArrow(null)}
-              reduceMotion={Boolean(reduceMotion)}
-            />
-            <NavArrow
-              direction="next"
-              onClick={next}
-              pressing={pressingArrow === "next"}
-              onPressStart={() => setPressingArrow("next")}
-              onPressEnd={() => setPressingArrow(null)}
-              reduceMotion={Boolean(reduceMotion)}
-            />
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function FlickerOverlay() {
+  return (
+    <motion.div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-50 bg-ink"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 0.85, 0.15, 0.9, 0.4, 0.95] }}
+      transition={{ duration: 0.07, ease: "linear" }}
+    />
+  );
+}
+
+function LeaderFlash() {
+  return (
+    <motion.div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-50 bg-parchment"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 0.92, 0.35, 0] }}
+      transition={{ duration: 0.1, ease: GATE_EASE }}
+    />
   );
 }
 
@@ -291,7 +418,7 @@ function FilmGateLine({ travel }: { travel: number }) {
     <>
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-40 h-[2px] bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.45)]"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[55] h-[2px] bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.45)]"
         initial={{ y: -4, opacity: 0.9 }}
         animate={{ y: distance, opacity: [0.9, 0.65, 0] }}
         transition={{
@@ -302,7 +429,7 @@ function FilmGateLine({ travel }: { travel: number }) {
       />
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-40 h-px bg-black/40"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[55] h-px bg-black/40"
         initial={{ y: -2 }}
         animate={{ y: distance }}
         transition={{ duration: 0.18, ease: GATE_EASE, delay: 0.01 }}
