@@ -19,37 +19,24 @@ import { OdometerYearLabel } from "@/components/OdometerYearLabel";
 import { TiltPhoto } from "@/components/TiltPhoto";
 
 const AUTO_MS = 5500;
-const FRAME_EXIT_S = 0.1;
-const FRAME_ENTER_S = 0.14;
+const FRAME_EXIT_S = 0.09;
+const FRAME_ENTER_S = 0.13;
 const GATE_EASE = [0.55, 0.06, 0.68, 0.19] as const;
 
+/** GPU-only shell transition — opacity + transform, no filter */
 const filmAdvanceVariants: Variants = {
-  enter: {
-    y: -14,
-    opacity: 0,
-    scale: 1.008,
-    filter: "blur(3px)",
-  },
+  enter: { opacity: 0, y: -12, scale: 1.004 },
   center: {
-    y: 0,
     opacity: 1,
+    y: 0,
     scale: 1,
-    filter: "blur(0px)",
-    transition: {
-      duration: FRAME_ENTER_S,
-      ease: [0.16, 1, 0.3, 1],
-      delay: 0.07,
-    },
+    transition: { duration: FRAME_ENTER_S, ease: [0.16, 1, 0.3, 1], delay: 0.06 },
   },
   exit: {
-    y: [0, 16, 10],
-    opacity: [1, 0.5, 0],
-    filter: ["blur(0px)", "blur(6px)", "blur(2px)"],
-    transition: {
-      duration: FRAME_EXIT_S,
-      ease: GATE_EASE,
-      times: [0, 0.6, 1],
-    },
+    opacity: 0,
+    y: 14,
+    scale: 0.998,
+    transition: { duration: FRAME_EXIT_S, ease: GATE_EASE },
   },
 };
 
@@ -59,21 +46,52 @@ const reducedVariants: Variants = {
   exit: { opacity: 0, transition: { duration: 0.1 } },
 };
 
+function useLowPowerFallback() {
+  const [lowPower, setLowPower] = useState(false);
+
+  useEffect(() => {
+    let frames = 0;
+    const start = performance.now();
+    let raf = 0;
+
+    const tick = (t: number) => {
+      frames += 1;
+      if (t - start < 480) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      if (frames / ((t - start) / 1000) < 48) setLowPower(true);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return lowPower;
+}
+
 export function CommitteeSlider() {
   const reduceMotion = useReducedMotion();
+  const lowPower = useLowPowerFallback();
   const photos = COMMITTEE_PHOTOS;
   const count = photos.length;
 
   const [index, setIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [pressingArrow, setPressingArrow] = useState<"prev" | "next" | null>(null);
   const [gatePulse, setGatePulse] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
+  const [frameHeight, setFrameHeight] = useState(0);
 
+  const indexRef = useRef(0);
   const slideStartRef = useRef(Date.now());
   const frameRef = useRef<HTMLDivElement>(null);
-  const [frameHeight, setFrameHeight] = useState(0);
+  const progressRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
   const active = photos[index]!;
+  const disableTilt = Boolean(reduceMotion) || lowPower;
+
+  indexRef.current = index;
 
   useEffect(() => {
     const el = frameRef.current;
@@ -85,43 +103,52 @@ export function CommitteeSlider() {
     return () => ro.disconnect();
   }, []);
 
+  const paintProgress = useCallback((progress: number, activeIdx: number) => {
+    progressRefs.current.forEach((bar, i) => {
+      if (!bar) return;
+      const scale = i < activeIdx ? 1 : i === activeIdx ? progress : 0;
+      bar.style.transform = `scaleX(${scale})`;
+    });
+  }, []);
+
   const goTo = useCallback(
     (nextIndex: number) => {
       const normalized = ((nextIndex % count) + count) % count;
-      if (normalized === index) return;
+      if (normalized === indexRef.current) return;
+      setTransitioning(true);
       setIndex(normalized);
-      setProgress(0);
       slideStartRef.current = Date.now();
+      paintProgress(0, normalized);
       if (!reduceMotion) setGatePulse((n) => n + 1);
+      window.setTimeout(() => setTransitioning(false), 380);
     },
-    [count, index, reduceMotion]
+    [count, paintProgress, reduceMotion]
   );
 
-  const next = useCallback(() => goTo(index + 1), [goTo, index]);
-  const prev = useCallback(() => goTo(index - 1), [goTo, index]);
+  const next = useCallback(() => goTo(indexRef.current + 1), [goTo]);
+  const prev = useCallback(() => goTo(indexRef.current - 1), [goTo]);
 
   useEffect(() => {
     if (reduceMotion) {
-      setProgress(1);
+      paintProgress(1, index);
       return;
     }
 
     let raf = 0;
     const tick = () => {
-      if (!paused) {
+      if (!paused && !transitioning) {
         const elapsed = Date.now() - slideStartRef.current;
-        setProgress(Math.min(elapsed / AUTO_MS, 1));
+        const p = Math.min(elapsed / AUTO_MS, 1);
+        paintProgress(p, indexRef.current);
         if (elapsed >= AUTO_MS) {
           next();
-          slideStartRef.current = Date.now();
-          setProgress(0);
         }
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [reduceMotion, paused, next, index]);
+  }, [reduceMotion, paused, transitioning, next, paintProgress, index]);
 
   function onSwipeEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
     if (reduceMotion) return;
@@ -136,7 +163,7 @@ export function CommitteeSlider() {
   function resumeInteraction() {
     setPaused(false);
     slideStartRef.current = Date.now();
-    setProgress(0);
+    paintProgress(0, indexRef.current);
   }
 
   const variants = reduceMotion ? reducedVariants : filmAdvanceVariants;
@@ -172,23 +199,17 @@ export function CommitteeSlider() {
               className="group relative h-1 flex-1 overflow-hidden bg-white/[0.08] transition-colors hover:bg-white/[0.12]"
             >
               <span
-                className="absolute inset-y-0 left-0 bg-marquee transition-none"
-                style={{
-                  width:
-                    i < index ? "100%" : i === index ? `${progress * 100}%` : "0%",
+                ref={(el) => {
+                  progressRefs.current[i] = el;
                 }}
+                className="absolute inset-y-0 left-0 w-full origin-left bg-marquee"
+                style={{ transform: "scaleX(0)" }}
               />
             </button>
           ))}
         </div>
 
-        <div
-          className="relative mx-auto w-full"
-          style={{
-            filter:
-              "drop-shadow(0 22px 38px rgba(0,0,0,0.55)) drop-shadow(0 0 32px rgba(234,179,8,0.08))",
-          }}
-        >
+        <div className="relative mx-auto w-full shadow-[0_22px_38px_rgba(0,0,0,0.55),0_0_32px_rgba(234,179,8,0.08)]">
           <div
             ref={frameRef}
             className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
@@ -201,28 +222,26 @@ export function CommitteeSlider() {
                 initial="enter"
                 animate="center"
                 exit="exit"
+                style={{ willChange: transitioning ? "transform, opacity" : "auto" }}
               >
                 <TiltPhoto
                   src={active.imageUrl}
                   alt={active.alt}
                   foregroundSrc={active.foregroundUrl}
                   priority
-                  disableTilt={Boolean(reduceMotion)}
+                  disableTilt={disableTilt}
+                  kenBurnsMs={AUTO_MS}
                 />
               </motion.div>
             </AnimatePresence>
 
-            {/* Film gate frame-line sweep */}
-            {!reduceMotion && (
-              <FilmGateLine key={gatePulse} travel={frameHeight} />
-            )}
+            {!reduceMotion && <FilmGateLine key={gatePulse} travel={frameHeight} />}
 
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-ink via-ink/15 to-ink/10 opacity-75"
             />
 
-            {/* Swipe surface — no horizontal slide, gesture only */}
             {!reduceMotion && (
               <motion.div
                 className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
@@ -265,7 +284,6 @@ export function CommitteeSlider() {
   );
 }
 
-/** Thin horizontal frame-line — film projector gate artifact */
 function FilmGateLine({ travel }: { travel: number }) {
   const distance = Math.max(travel, 1);
 
@@ -275,21 +293,19 @@ function FilmGateLine({ travel }: { travel: number }) {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 z-40 h-[2px] bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.45)]"
         initial={{ y: -4, opacity: 0.9 }}
-        animate={{ y: distance, opacity: [0.9, 0.7, 0] }}
+        animate={{ y: distance, opacity: [0.9, 0.65, 0] }}
         transition={{
-          duration: 0.19,
+          duration: 0.18,
           ease: GATE_EASE,
-          opacity: { duration: 0.19, times: [0, 0.4, 1] },
+          opacity: { duration: 0.18, times: [0, 0.45, 1] },
         }}
-        style={{ willChange: "transform, opacity" }}
       />
       <motion.div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 z-40 h-px bg-black/40"
         initial={{ y: -2 }}
         animate={{ y: distance }}
-        transition={{ duration: 0.19, ease: GATE_EASE, delay: 0.012 }}
-        style={{ willChange: "transform" }}
+        transition={{ duration: 0.18, ease: GATE_EASE, delay: 0.01 }}
       />
     </>
   );

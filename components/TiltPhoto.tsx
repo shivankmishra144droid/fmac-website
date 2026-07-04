@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   motion,
+  useAnimationFrame,
   useMotionValue,
   useSpring,
   useTransform,
@@ -12,11 +13,11 @@ import {
 export type TiltPhotoProps = {
   src: string;
   alt: string;
-  /** Optional cut-out foreground layer for true parallax depth */
   foregroundSrc?: string;
   priority?: boolean;
-  /** Disable tilt/light-sweep (reduced motion or perf fallback) */
   disableTilt?: boolean;
+  /** Ken Burns loop duration in ms (match slide auto-advance) */
+  kenBurnsMs?: number;
   className?: string;
   sizes?: string;
 };
@@ -24,9 +25,14 @@ export type TiltPhotoProps = {
 const PHOTO_GRADE =
   "object-cover object-center brightness-[0.92] contrast-[1.06] saturate-[0.88] sepia-[0.12]";
 
+const SPRING = { stiffness: 120, damping: 26, mass: 0.35 };
+
 /**
- * Lenticular-style tilt card: cursor-driven parallax, glossy light sweep,
- * optional foreground/background depth split, film grain, dynamic shadow.
+ * Lenticular tilt card — four independent GPU layers:
+ * 1. Ken Burns (scale on image shell)
+ * 2. Cursor parallax (translate on parallax shell)
+ * 3. Card tilt (rotate on tilt shell)
+ * 4. Light sweep (translate on overlay shells)
  */
 export function TiltPhoto({
   src,
@@ -34,19 +40,27 @@ export function TiltPhoto({
   foregroundSrc,
   priority,
   disableTilt = false,
+  kenBurnsMs = 5500,
   className = "",
   sizes = "(max-width: 768px) 100vw, 922px",
 }: TiltPhotoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTouch, setIsTouch] = useState(false);
+  const [interacting, setInteracting] = useState(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const normX = useMotionValue(0.5);
   const normY = useMotionValue(0.5);
-  const springX = useSpring(normX, { stiffness: 90, damping: 22, mass: 0.45 });
-  const springY = useSpring(normY, { stiffness: 90, damping: 22, mass: 0.45 });
+  const springX = useSpring(normX, SPRING);
+  const springY = useSpring(normY, SPRING);
+
+  const interactingRef = useRef(false);
+  interactingRef.current = interacting;
 
   const parallaxOn = !disableTilt;
   const cursorTiltOn = parallaxOn && !isTouch;
+
+  const gpuHint = interacting && parallaxOn;
 
   useEffect(() => {
     setIsTouch(
@@ -54,36 +68,56 @@ export function TiltPhoto({
     );
   }, []);
 
+  const markInteracting = () => {
+    setInteracting(true);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setInteracting(false), 140);
+  };
+
   useEffect(() => {
     if (!cursorTiltOn) return;
     const el = containerRef.current;
     if (!el) return;
 
+    let raf = 0;
+    let px = 0.5;
+    let py = 0.5;
+
+    const flush = () => {
+      raf = 0;
+      normX.set(px);
+      normY.set(py);
+      markInteracting();
+    };
+
     const onMove = (e: PointerEvent) => {
       const rect = el.getBoundingClientRect();
-      normX.set((e.clientX - rect.left) / rect.width);
-      normY.set((e.clientY - rect.top) / rect.height);
+      px = (e.clientX - rect.left) / rect.width;
+      py = (e.clientY - rect.top) / rect.height;
+      if (!raf) raf = requestAnimationFrame(flush);
     };
 
     const onLeave = () => {
-      normX.set(0.5);
-      normY.set(0.5);
+      px = 0.5;
+      py = 0.5;
+      if (!raf) raf = requestAnimationFrame(flush);
+      setInteracting(false);
     };
 
-    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointermove", onMove, { passive: true });
     el.addEventListener("pointerleave", onLeave);
     return () => {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
+      if (raf) cancelAnimationFrame(raf);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, [cursorTiltOn, normX, normY]);
 
   useEffect(() => {
     if (!parallaxOn || !isTouch) return;
 
-    let raf = 0;
     let usingGyro = false;
-
     const onOrient = (e: DeviceOrientationEvent) => {
       usingGyro = true;
       const gamma = e.gamma ?? 0;
@@ -91,59 +125,37 @@ export function TiltPhoto({
       normX.set(0.5 + Math.max(-0.45, Math.min(0.45, gamma / 50)));
       normY.set(0.5 + Math.max(-0.45, Math.min(0.45, (beta - 45) / 100)));
     };
-
-    window.addEventListener("deviceorientation", onOrient);
-
-    const start = performance.now();
-    const ambient = (t: number) => {
-      raf = requestAnimationFrame(ambient);
-      if (usingGyro) return;
-      const elapsed = (t - start) / 1000;
-      normX.set(0.5 + Math.sin(elapsed * 0.35) * 0.12);
-      normY.set(0.5 + Math.cos(elapsed * 0.28) * 0.09);
-    };
-    raf = requestAnimationFrame(ambient);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("deviceorientation", onOrient);
-    };
+    window.addEventListener("deviceorientation", onOrient, { passive: true });
+    return () => window.removeEventListener("deviceorientation", onOrient);
   }, [parallaxOn, isTouch, normX, normY]);
 
+  useAnimationFrame((t) => {
+    if (!parallaxOn || interactingRef.current) return;
+    const s = t / 1000;
+    normX.set(0.5 + Math.sin(s * 0.42) * 0.18);
+    normY.set(0.5 + Math.cos(s * 0.36) * 0.14);
+  });
+
+  const lightX = useTransform(springX, [0, 1], ["-18%", "58%"]);
+  const lightY = useTransform(springY, [0, 1], ["-12%", "52%"]);
+
   const shift = parallaxOn ? 1 : 0;
+  const bgX = useTransform(springX, [0, 1], [3 * shift, -3 * shift]);
+  const bgY = useTransform(springY, [0, 1], [2.5 * shift, -2.5 * shift]);
+  const fgX = useTransform(springX, [0, 1], [-6 * shift, 6 * shift]);
+  const fgY = useTransform(springY, [0, 1], [-4.5 * shift, 4.5 * shift]);
+  const layerX = useTransform(springX, [0, 1], [-5 * shift, 5 * shift]);
+  const layerY = useTransform(springY, [0, 1], [-3.5 * shift, 3.5 * shift]);
 
-  const bgX = useTransform(springX, [0, 1], [4 * shift, -4 * shift]);
-  const bgY = useTransform(springY, [0, 1], [3 * shift, -3 * shift]);
-  const fgX = useTransform(springX, [0, 1], [-7 * shift, 7 * shift]);
-  const fgY = useTransform(springY, [0, 1], [-5 * shift, 5 * shift]);
-  const layerX = useTransform(springX, [0, 1], [-6 * shift, 6 * shift]);
-  const layerY = useTransform(springY, [0, 1], [-4.5 * shift, 4.5 * shift]);
+  const cardRotateY = useTransform(springX, [0, 1], cursorTiltOn ? [1.8, -1.8] : [0, 0]);
+  const cardRotateX = useTransform(springY, [0, 1], cursorTiltOn ? [-1.4, 1.4] : [0, 0]);
 
-  const cardRotateY = useTransform(springX, [0, 1], cursorTiltOn ? [2.2, -2.2] : [0, 0]);
-  const cardRotateX = useTransform(springY, [0, 1], cursorTiltOn ? [-1.8, 1.8] : [0, 0]);
+  const shadowX = useTransform(springX, [0, 1], [8 * shift, -8 * shift]);
+  const shadowY = useTransform(springY, [0, 1], [6 * shift, -6 * shift]);
 
-  const highlightX = useTransform(springX, (v) => `${v * 100}%`);
-  const highlightY = useTransform(springY, (v) => `${v * 100}%`);
-
-  const glossRadial = useTransform(
-    [highlightX, highlightY],
-    ([hx, hy]) =>
-      `radial-gradient(ellipse 55% 45% at ${hx} ${hy}, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 35%, transparent 68%)`
-  );
-
-  const glossStreak = useTransform(
-    [highlightX, highlightY],
-    ([hx, hy]) =>
-      `linear-gradient(118deg, transparent 42%, rgba(255,255,255,0.14) 50%, transparent 58%)`
-  );
-
-  const glossPosition = useTransform(
-    [highlightX, highlightY],
-    ([hx, hy]) => `${hx} ${hy}`
-  );
-
-  const shadowX = useTransform(springX, [0, 1], [10 * shift, -10 * shift]);
-  const shadowY = useTransform(springY, [0, 1], [8 * shift, -8 * shift]);
+  const layerStyle = gpuHint
+    ? ({ willChange: "transform" } as const)
+    : undefined;
 
   return (
     <div className={`relative h-full w-full ${className}`}>
@@ -151,55 +163,72 @@ export function TiltPhoto({
         <motion.div
           aria-hidden
           className="pointer-events-none absolute -inset-x-4 bottom-[-10%] z-0 h-[18%] rounded-[50%] bg-black/50 blur-2xl"
-          style={{ x: shadowX, y: shadowY, willChange: "transform" }}
+          style={{ x: shadowX, y: shadowY, ...layerStyle }}
         />
       )}
 
       <div
         ref={containerRef}
         className="relative z-[1] h-full w-full overflow-hidden"
-        style={{ perspective: cursorTiltOn ? 900 : undefined }}
+        style={{ perspective: cursorTiltOn ? 1000 : undefined }}
       >
+        {/* Layer 3 — card tilt (rotate only) */}
         <motion.div
           className="relative h-full w-full"
           style={{
             rotateX: cardRotateX,
             rotateY: cardRotateY,
             transformStyle: "preserve-3d",
-            willChange: "transform",
+            ...layerStyle,
           }}
         >
+          {/* Layer 2 — parallax translate (separate from Ken Burns scale) */}
           <motion.div
-            className="absolute inset-[-4%]"
+            className="absolute inset-0"
             style={{
               x: foregroundSrc ? bgX : layerX,
               y: foregroundSrc ? bgY : layerY,
-              willChange: "transform",
+              ...layerStyle,
             }}
           >
-            <Image
-              src={src}
-              alt={alt}
-              fill
-              priority={priority}
-              sizes={sizes}
-              unoptimized
-              className={PHOTO_GRADE}
-              draggable={false}
-            />
+            {/* Layer 1 — Ken Burns (scale only, long loop) */}
+            <motion.div
+              className="absolute inset-[-4%]"
+              animate={parallaxOn ? { scale: [1, 1.03] } : { scale: 1 }}
+              transition={
+                parallaxOn
+                  ? {
+                      duration: kenBurnsMs / 1000,
+                      ease: "linear",
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                    }
+                  : { duration: 0 }
+              }
+              style={layerStyle}
+            >
+              <Image
+                src={src}
+                alt={alt}
+                fill
+                priority={priority}
+                sizes={sizes}
+                className={PHOTO_GRADE}
+                draggable={false}
+              />
+            </motion.div>
           </motion.div>
 
           {foregroundSrc && (
             <motion.div
               className="absolute inset-[-2%] z-[2]"
-              style={{ x: fgX, y: fgY, willChange: "transform" }}
+              style={{ x: fgX, y: fgY, ...layerStyle }}
             >
               <Image
                 src={foregroundSrc}
                 alt=""
                 fill
                 sizes={sizes}
-                unoptimized
                 className="object-cover object-center"
                 draggable={false}
                 aria-hidden
@@ -207,26 +236,37 @@ export function TiltPhoto({
             </motion.div>
           )}
 
+          {/* Layer 4 — light sweep (transform-only overlays, no background string updates) */}
           {parallaxOn && (
             <>
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 z-[3] mix-blend-soft-light"
-                style={{ background: glossRadial }}
+                className="pointer-events-none absolute z-[3] h-[70%] w-[55%] rounded-full mix-blend-soft-light"
+                style={{
+                  x: lightX,
+                  y: lightY,
+                  background:
+                    "radial-gradient(circle, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 40%, transparent 72%)",
+                  opacity: interacting ? 0.85 : 0.45,
+                  ...layerStyle,
+                }}
               />
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 z-[3] opacity-40 mix-blend-overlay"
+                className="pointer-events-none absolute z-[3] h-[120%] w-[35%] mix-blend-overlay opacity-30"
                 style={{
-                  background: glossStreak,
-                  backgroundPosition: glossPosition,
-                  backgroundSize: "180% 180%",
+                  x: lightX,
+                  y: lightY,
+                  rotate: -18,
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)",
+                  ...layerStyle,
                 }}
               />
             </>
           )}
 
-          <PhotoGrain animate={parallaxOn} />
+          <StaticGrain />
 
           <div
             aria-hidden
@@ -242,71 +282,16 @@ export function TiltPhoto({
   );
 }
 
-function PhotoGrain({ animate }: { animate: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return;
-
-    const TILE = 96;
-    const tile = document.createElement("canvas");
-    tile.width = TILE;
-    tile.height = TILE;
-    const tileCtx = tile.getContext("2d");
-
-    let raf = 0;
-    let last = 0;
-    const interval = 1000 / 20;
-
-    const drawGrain = () => {
-      if (!tileCtx) return;
-      const image = tileCtx.createImageData(TILE, TILE);
-      const buf = image.data;
-      for (let i = 0; i < buf.length; i += 4) {
-        const v = (Math.random() * 255) | 0;
-        buf[i] = v;
-        buf[i + 1] = (v * 0.94) | 0;
-        buf[i + 2] = (v * 0.86) | 0;
-        buf[i + 3] = v;
-      }
-      tileCtx.putImageData(image, 0, 0);
-      canvas.width = canvas.offsetWidth || 1;
-      canvas.height = canvas.offsetHeight || 1;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const pattern = ctx.createPattern(tile, "repeat");
-      if (pattern) {
-        ctx.fillStyle = pattern;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    };
-
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop);
-      if (t - last < interval) return;
-      last = t;
-      drawGrain();
-    };
-
-    drawGrain();
-    if (animate) raf = requestAnimationFrame(loop);
-
-    const onResize = () => drawGrain();
-    window.addEventListener("resize", onResize);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [animate]);
-
+/** CSS/SVG grain — zero RAF cost */
+function StaticGrain() {
   return (
-    <canvas
-      ref={canvasRef}
+    <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-[3] h-full w-full mix-blend-overlay"
-      style={{ opacity: 0.045 }}
+      className="pointer-events-none absolute inset-0 z-[3] opacity-[0.042] mix-blend-overlay"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E")`,
+        backgroundSize: "128px 128px",
+      }}
     />
   );
 }
