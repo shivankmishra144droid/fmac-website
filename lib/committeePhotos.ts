@@ -4,6 +4,8 @@ export type CommitteePhoto = {
   shortLabel: string;
   imageUrl: string;
   alt: string;
+  /** Optional alpha-masked foreground for lenticular depth (stretch goal) */
+  foregroundUrl?: string;
 };
 
 /**
