@@ -19,6 +19,7 @@ import {
 } from "../lib/tenure";
 import { parseYtDlpJsonl, cleanMovieTitle, youtubeThumbnail } from "../lib/youtube";
 import { isAajaTitle } from "../lib/youtube-api";
+import { inferContentTypeFromTitle } from "../lib/content-type";
 
 const prisma = new PrismaClient();
 
@@ -43,6 +44,7 @@ function mockMoviesFromJsonl(): Movie[] {
     youtubeUrl: v.url,
     publishedAt: new Date(now - (videos.length - i) * 86400000 * 21),
     category: "SHORT" as const,
+    contentType: inferContentTypeFromTitle(v.title),
     runtimeSeconds: v.duration ? Math.round(v.duration) : null,
     format: "Digital · YouTube",
     crew: "Film Making Club, BITS Goa",
