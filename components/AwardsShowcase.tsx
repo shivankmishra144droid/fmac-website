@@ -171,7 +171,7 @@ export function AwardsShowcase() {
                     exit="exit"
                     transition={COORDINATED}
                   >
-                    <EvidenceFrame award={displayAward} reveal />
+                    <EvidenceFrame award={displayAward} />
                   </motion.div>
                 )}
               </AnimatePresence>
