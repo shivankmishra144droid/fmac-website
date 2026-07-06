@@ -261,10 +261,10 @@ export function OldFilmOverlay({
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden ${className}`}
+      className={`absolute inset-0 h-full w-full overflow-hidden ${className}`}
     >
       <motion.div
-        className="absolute inset-0"
+        className="relative z-[1] h-full w-full min-h-0"
         animate={{ y: reduceMotion ? 0 : jitterY }}
         transition={{ duration: 0.04, ease: "linear" }}
       >

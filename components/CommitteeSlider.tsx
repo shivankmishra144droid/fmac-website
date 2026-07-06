@@ -244,9 +244,9 @@ export function CommitteeSlider() {
             ref={frameRef}
             className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
           >
-            <OldFilmOverlay className="absolute inset-0 z-[1]">
+            <OldFilmOverlay className="z-[1]">
               <motion.div
-                className="absolute inset-0"
+                className="relative h-full w-full min-h-0"
                 animate={
                   !motionOn
                     ? undefined
@@ -269,6 +269,8 @@ export function CommitteeSlider() {
                   alt={active.alt}
                   foregroundSrc={active.foregroundUrl}
                   priority
+                  unoptimized
+                  fallbackLabel={active.year}
                   disableTilt={disableTilt || phase !== "idle"}
                   kenBurnsMs={AUTO_MS}
                 />

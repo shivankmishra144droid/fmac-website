@@ -20,6 +20,10 @@ export type TiltPhotoProps = {
   kenBurnsMs?: number;
   className?: string;
   sizes?: string;
+  /** Shown in fallback UI when the image fails to load */
+  fallbackLabel?: string;
+  /** Skip optimizer for large local static assets in /public */
+  unoptimized?: boolean;
 };
 
 const PHOTO_GRADE =
@@ -43,10 +47,13 @@ export function TiltPhoto({
   kenBurnsMs = 5500,
   className = "",
   sizes = "(max-width: 768px) 100vw, 922px",
+  fallbackLabel,
+  unoptimized = false,
 }: TiltPhotoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTouch, setIsTouch] = useState(false);
   const [interacting, setInteracting] = useState(false);
+  const [broken, setBroken] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const normX = useMotionValue(0.5);
@@ -67,6 +74,10 @@ export function TiltPhoto({
       window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window
     );
   }, []);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [src]);
 
   const markInteracting = () => {
     setInteracting(true);
@@ -157,6 +168,15 @@ export function TiltPhoto({
     ? ({ willChange: "transform" } as const)
     : undefined;
 
+  if (broken) {
+    return (
+      <PhotoLoadFallback
+        className={className}
+        label={fallbackLabel ?? alt}
+      />
+    );
+  }
+
   return (
     <div className={`relative h-full w-full ${className}`}>
       {parallaxOn && (
@@ -213,8 +233,10 @@ export function TiltPhoto({
                 fill
                 priority={priority}
                 sizes={sizes}
+                unoptimized={unoptimized}
                 className={PHOTO_GRADE}
                 draggable={false}
+                onError={() => setBroken(true)}
               />
             </motion.div>
           </motion.div>
@@ -277,6 +299,45 @@ export function TiltPhoto({
             }}
           />
         </motion.div>
+      </div>
+    </div>
+  );
+}
+
+function PhotoLoadFallback({
+  className = "",
+  label,
+}: {
+  className?: string;
+  label: string;
+}) {
+  return (
+    <div
+      className={`relative h-full w-full overflow-hidden bg-ink-800 ${className}`}
+      role="img"
+      aria-label={`${label} committee photo coming soon`}
+    >
+      <div className="flex h-full w-full flex-col items-center justify-center px-6 text-center">
+        <div
+          aria-hidden
+          className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-ink-700/60"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-7 w-7 text-parchment/25"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.25"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
+            <path d="M21 16l-5-5L9 18" />
+          </svg>
+        </div>
+        <p className="type-label tracking-label text-parchment/45">
+          Photo coming soon
+        </p>
+        <p className="type-eyebrow mt-2 text-parchment/25">{label}</p>
       </div>
     </div>
   );
