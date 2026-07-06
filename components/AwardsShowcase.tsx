@@ -11,7 +11,7 @@ import {
 } from "framer-motion";
 import { AWARDS, primaryAwardImage, type Award } from "@/lib/awards";
 
-const AUTO_MS = 9000;
+const AUTO_MS = 4000;
 const REVEAL_S = 1.35;
 const EXIT_S = 0.9;
 const CONTENT_DELAY = 0.28;
@@ -106,6 +106,10 @@ export function AwardsShowcase() {
 
   const shouldAnimate = !reduceMotion && inView;
 
+  const goTo = useCallback((next: number) => {
+    setIndex(((next % AWARDS.length) + AWARDS.length) % AWARDS.length);
+  }, []);
+
   const advance = useCallback(() => {
     setIndex((i) => (i + 1) % AWARDS.length);
   }, []);
@@ -124,9 +128,9 @@ export function AwardsShowcase() {
 
   useEffect(() => {
     if (!shouldAnimate) return;
-    const id = window.setInterval(advance, AUTO_MS);
-    return () => window.clearInterval(id);
-  }, [shouldAnimate, advance]);
+    const id = window.setTimeout(advance, AUTO_MS);
+    return () => window.clearTimeout(id);
+  }, [shouldAnimate, index, advance]);
 
   const displayIndex = reduceMotion ? 0 : index;
   const displayAward = AWARDS[displayIndex]!;
@@ -138,7 +142,7 @@ export function AwardsShowcase() {
       aria-label="Awards and festival selections"
     >
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {displayAward.award} — {displayAward.film}. {displayAward.festival},{" "}
+        {displayAward.award}, {displayAward.film}. {displayAward.festival},{" "}
         {displayAward.year}.
       </div>
 
@@ -207,7 +211,11 @@ export function AwardsShowcase() {
 
       <div className="relative z-10 flex min-h-[100svh] items-center py-12 sm:py-16">
         <div className="flex w-full items-center gap-4 px-5 sm:gap-5 sm:px-10 lg:px-14">
-          <ProgressTicks activeIndex={displayIndex} reduceMotion={!!reduceMotion} />
+          <ProgressTicks
+            activeIndex={displayIndex}
+            reduceMotion={!!reduceMotion}
+            onSelect={goTo}
+          />
 
           <div className="grid w-full flex-1 grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-10 xl:gap-14">
             <div className="relative overflow-hidden">
@@ -309,35 +317,65 @@ function AwardBackground({
 function ProgressTicks({
   activeIndex,
   reduceMotion,
+  onSelect,
 }: {
   activeIndex: number;
   reduceMotion: boolean;
+  onSelect: (index: number) => void;
 }) {
   return (
-    <div className="flex shrink-0 flex-col gap-3 pt-1" aria-hidden>
+    <div
+      className="flex shrink-0 flex-col gap-3 pt-1"
+      role="tablist"
+      aria-label="Award slides"
+    >
       {AWARDS.map((award, i) => {
         const active = i === activeIndex;
         return (
-          <motion.span
+          <button
             key={award.id}
-            layout={!reduceMotion}
-            className="block w-0.5 rounded-full"
-            animate={{
-              height: active ? 40 : 16,
-              opacity: active ? 1 : 0.22,
-              backgroundColor: active
-                ? "rgba(234, 179, 8, 1)"
-                : "rgba(255, 255, 255, 0.2)",
-              boxShadow: active
-                ? "0 0 14px rgba(234, 179, 8, 0.55)"
-                : "0 0 0px rgba(234, 179, 8, 0)",
-            }}
-            transition={
-              reduceMotion
-                ? { duration: 0 }
-                : { duration: 0.85, ease: LUXURY }
-            }
-          />
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={`${award.award}, ${award.film}`}
+            onClick={() => onSelect(i)}
+            className="group relative block w-0.5 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-marquee/60"
+          >
+            <motion.span
+              layout={!reduceMotion}
+              className="relative block w-full overflow-hidden rounded-full bg-white/20"
+              animate={{
+                height: active ? 40 : 16,
+                opacity: active ? 1 : 0.22,
+                boxShadow: active
+                  ? "0 0 14px rgba(234, 179, 8, 0.55)"
+                  : "0 0 0px rgba(234, 179, 8, 0)",
+              }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { duration: 0.85, ease: LUXURY }
+              }
+            >
+              {active && !reduceMotion && (
+                <motion.span
+                  key={`progress-${activeIndex}`}
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 block rounded-full bg-marquee"
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ duration: AUTO_MS / 1000, ease: "linear" }}
+                  style={{ height: "100%", transformOrigin: "bottom" }}
+                />
+              )}
+              {active && reduceMotion && (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 block rounded-full bg-marquee"
+                />
+              )}
+            </motion.span>
+          </button>
         );
       })}
     </div>
@@ -392,7 +430,7 @@ function EvidenceFrame({
         >
           <Image
             src={heroSrc}
-            alt={`${award.film} — ${award.award}`}
+            alt={`${award.film}, ${award.award}`}
             fill
             unoptimized
             sizes="(max-width: 1024px) 100vw, 540px"

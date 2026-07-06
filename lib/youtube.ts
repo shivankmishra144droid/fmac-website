@@ -54,7 +54,7 @@ export function isBrokenYoutubeThumbnail(url: string | null | undefined): boolea
 }
 
 export function formatRuntime(seconds: number | null | undefined): string {
-  if (!seconds || seconds <= 0) return "—";
+  if (!seconds || seconds <= 0) return "";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m} min`;
@@ -139,14 +139,14 @@ export function buildMovieDescription(
   const base = cleanMovieTitle(title);
   switch (category) {
     case "DOCUMENTARY":
-      return `${base} — a documentary from the Film Making Club, BITS Goa. Shot and edited by student filmmakers on campus.${runtime ? ` Runtime ${runtime}.` : ""}`;
+      return `${base}, a documentary from the Film Making Club, BITS Goa. Shot and edited by student filmmakers on campus.${runtime ? ` Runtime ${runtime}.` : ""}`;
     case "EXPERIMENTAL":
-      return `${base} — an experimental film from FMAC exploring form, texture, and student vision.${runtime ? ` Runtime ${runtime}.` : ""}`;
+      return `${base}, an experimental film from FMAC exploring form, texture, and student vision.${runtime ? ` Runtime ${runtime}.` : ""}`;
     case "MOVIE":
-      return `${base} — a feature-length student film from the Film Making Club, BITS Goa.${runtime ? ` Runtime ${runtime}.` : ""}`;
+      return `${base}, a feature-length student film from the Film Making Club, BITS Goa.${runtime ? ` Runtime ${runtime}.` : ""}`;
     case "SHORT":
     default:
-      return `${base} — an original short from FMAC, the Film Making Club at BITS Goa. Written, directed, and produced by students.${runtime ? ` Runtime ${runtime}.` : ""}`;
+      return `${base}, an original short from FMAC, the Film Making Club at BITS Goa. Written, directed, and produced by students.${runtime ? ` Runtime ${runtime}.` : ""}`;
   }
 }
 
@@ -212,7 +212,7 @@ export const PRIORITY_FILM_OVERRIDES: PriorityFilmOverride[] = [
     isFmacSelect: true,
     tagline: "A slice-of-life drama about memory, family, and the stories we inherit.",
     description:
-      "Portrait of My Grandfather — FMAC's 2026 slice-of-life short. A tender campus film about the quiet bond between generations, shot and edited entirely by students at BITS Goa.",
+      "Portrait of My Grandfather. FMAC's 2026 slice-of-life short. A tender campus film about the quiet bond between generations, shot and edited entirely by students at BITS Goa.",
   },
   {
     matchKey: "bansuri",
@@ -221,7 +221,7 @@ export const PRIORITY_FILM_OVERRIDES: PriorityFilmOverride[] = [
     category: "MOVIE",
     tagline: "Music, longing, and the spaces between notes.",
     description:
-      "Bansuri — a 2024 FMAC original following the pull of melody across campus life. Written, directed, and produced by the Film Making Club, BITS Goa.",
+      "Bansuri, a 2024 FMAC original following the pull of melody across campus life. Written, directed, and produced by the Film Making Club, BITS Goa.",
   },
   {
     matchKey: "summer",
@@ -230,7 +230,7 @@ export const PRIORITY_FILM_OVERRIDES: PriorityFilmOverride[] = [
     category: "SHORT",
     tagline: "Heat, restlessness, and the last days before everything changes.",
     description:
-      "summer — a 2022 short from FMAC capturing Goa in slow motion: friendship, boredom, and the haze of vacation before the semester returns.",
+      "summer, a 2022 short from FMAC capturing Goa in slow motion: friendship, boredom, and the haze of vacation before the semester returns.",
   },
 ];
 

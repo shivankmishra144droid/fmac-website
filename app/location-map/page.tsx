@@ -17,7 +17,7 @@ export default async function LocationMapPage() {
       <PageHeader
         eyebrow="Find Us"
         title="Location"
-        description="Screenings, workshops and club meets — here's where to find the projector running."
+        description="Screenings, workshops and club meets. Here's where to find the projector running."
       />
 
       <section className="mx-auto grid max-w-6xl gap-10 px-6 pb-28 lg:grid-cols-[1fr_minmax(0,380px)]">

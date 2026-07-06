@@ -129,7 +129,7 @@ function LibraryHomeInner({
 
       {dbConnected === false && (
         <StatusBanner className="mt-6">
-          Showing demo films — Postgres is not running.
+          Showing demo films. Postgres is not running.
         </StatusBanner>
       )}
       {dbConnected === true && dbSeeded === false && (

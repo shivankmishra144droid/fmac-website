@@ -6,12 +6,12 @@ export const DEFAULT_LOCATION: Omit<LocationInfo, "updatedAt"> = {
   id: "default",
   name: "FMAC Screening Room",
   address:
-    "Auditorium Complex, BITS Pilani — K.K. Birla Goa Campus, NH-17B, Zuarinagar, Goa 403726, India",
+    "Auditorium Complex, BITS Pilani, K.K. Birla Goa Campus, NH-17B, Zuarinagar, Goa 403726, India",
   // Generic campus map embed; replace via the DB / admin later.
   mapEmbedUrl:
     "https://www.google.com/maps?q=BITS+Pilani+KK+Birla+Goa+Campus&output=embed",
   description:
-    "Screenings and club meets happen here. Doors open just before showtime — come early, the good seats fill fast.",
+    "Screenings and club meets happen here. Doors open just before showtime. Come early, the good seats fill fast.",
 };
 
 /** Fetch the (single-row) location info, falling back to a default. */

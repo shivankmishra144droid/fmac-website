@@ -132,11 +132,11 @@ async function main() {
   const locData = {
     name: "FMAC Screening Room",
     address:
-      "Auditorium Complex, BITS Pilani — K.K. Birla Goa Campus, NH-17B, Zuarinagar, Goa 403726, India",
+      "Auditorium Complex, BITS Pilani, K.K. Birla Goa Campus, NH-17B, Zuarinagar, Goa 403726, India",
     mapEmbedUrl:
       "https://www.google.com/maps?q=BITS+Pilani+KK+Birla+Goa+Campus&output=embed",
     description:
-      "Screenings and club meets happen here. Doors open just before showtime — come early, the good seats fill fast.",
+      "Screenings and club meets happen here. Doors open just before showtime. Come early, the good seats fill fast.",
   };
   const existingLoc = await prisma.locationInfo.findFirst();
   if (existingLoc) {
@@ -155,7 +155,7 @@ async function main() {
       sortOrder: 0,
     },
     {
-      title: "JIFF 2024 — Best Film",
+      title: "JIFF 2024, Best Film",
       year: 2024,
       laurel: "Jaipur International Film Festival",
       movieTitle: "Rakshasa",

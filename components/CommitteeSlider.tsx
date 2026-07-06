@@ -10,6 +10,7 @@ import {
 import { motion, useReducedMotion, type PanInfo } from "framer-motion";
 import { COMMITTEE_PHOTOS } from "@/lib/committeePhotos";
 import { OdometerYearLabel } from "@/components/OdometerYearLabel";
+import { OldFilmOverlay } from "@/components/OldFilmOverlay";
 import { ProjectorIcon } from "@/components/ProjectorIcon";
 import { ProjectorSliderBeam } from "@/components/ProjectorSliderBeam";
 import { ProjectorSoundToggle } from "@/components/ProjectorSoundToggle";
@@ -347,6 +348,8 @@ export function CommitteeSlider() {
                 aria-hidden
                 className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-ink via-ink/15 to-ink/10 opacity-75"
               />
+
+              <OldFilmOverlay className="z-[6]" />
 
               {motionOn && (
                 <motion.div

@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "FMAC — Film Making Club, BITS Goa",
+    default: "FMAC · Film Making Club, BITS Goa",
     template: "%s · FMAC",
   },
   description:

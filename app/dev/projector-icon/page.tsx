@@ -8,19 +8,19 @@ export default function ProjectorIconPreviewPage() {
       </h1>
       <div className="flex flex-wrap items-end gap-16">
         <div className="text-center">
-          <p className="type-label mb-3 text-parchment/40">Nav — 24px</p>
+          <p className="type-label mb-3 text-parchment/40">Nav (24px)</p>
           <ProjectorIcon size={24} animate={false} />
         </div>
         <div className="text-center">
-          <p className="type-label mb-3 text-parchment/40">Mobile — 52px</p>
+          <p className="type-label mb-3 text-parchment/40">Mobile (52px)</p>
           <ProjectorIcon size={52} animate={false} />
         </div>
         <div className="text-center">
-          <p className="type-label mb-3 text-parchment/40">Slider — 148px</p>
+          <p className="type-label mb-3 text-parchment/40">Slider (148px)</p>
           <ProjectorIcon size={148} animate={false} />
         </div>
         <div className="text-center">
-          <p className="type-label mb-3 text-parchment/40">Hero — 220px</p>
+          <p className="type-label mb-3 text-parchment/40">Hero (220px)</p>
           <ProjectorIcon size={220} animate={false} />
         </div>
       </div>

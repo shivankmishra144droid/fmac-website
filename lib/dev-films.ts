@@ -11,9 +11,9 @@ export const DEV_FILMS: Movie[] = [
     title: "Portrait of My Grandfather",
     tagline: "A slice-of-life drama about memory, family, and the stories we inherit.",
     description:
-      "Portrait of My Grandfather — FMAC's 2026 slice-of-life short. A tender campus film about the quiet bond between generations, shot and edited entirely by students at BITS Goa.",
+      "Portrait of My Grandfather. FMAC's 2026 slice-of-life short. A tender campus film about the quiet bond between generations, shot and edited entirely by students at BITS Goa.",
     synopsis:
-      "Portrait of My Grandfather — FMAC's 2026 slice-of-life short. A tender campus film about the quiet bond between generations, shot and edited entirely by students at BITS Goa.",
+      "Portrait of My Grandfather. FMAC's 2026 slice-of-life short. A tender campus film about the quiet bond between generations, shot and edited entirely by students at BITS Goa.",
     releaseYear: 2026,
     posterUrl: "https://img.youtube.com/vi/dJFUC_qrvyg/maxresdefault.jpg",
     thumbnailUrl: "https://img.youtube.com/vi/dJFUC_qrvyg/hqdefault.jpg",
@@ -37,9 +37,9 @@ export const DEV_FILMS: Movie[] = [
     title: "Bansuri",
     tagline: "Music, longing, and the spaces between notes.",
     description:
-      "Bansuri — a 2024 FMAC original following the pull of melody across campus life. Written, directed, and produced by the Film Making Club, BITS Goa.",
+      "Bansuri, a 2024 FMAC original following the pull of melody across campus life. Written, directed, and produced by the Film Making Club, BITS Goa.",
     synopsis:
-      "Bansuri — a 2024 FMAC original following the pull of melody across campus life. Written, directed, and produced by the Film Making Club, BITS Goa.",
+      "Bansuri, a 2024 FMAC original following the pull of melody across campus life. Written, directed, and produced by the Film Making Club, BITS Goa.",
     releaseYear: 2024,
     posterUrl: "https://img.youtube.com/vi/fyRWAgOiYwA/maxresdefault.jpg",
     thumbnailUrl: "https://img.youtube.com/vi/fyRWAgOiYwA/hqdefault.jpg",
@@ -63,9 +63,9 @@ export const DEV_FILMS: Movie[] = [
     title: "summer",
     tagline: "Heat, restlessness, and the last days before everything changes.",
     description:
-      "summer — a 2022 short from FMAC capturing Goa in slow motion: friendship, boredom, and the haze of vacation before the semester returns.",
+      "summer, a 2022 short from FMAC capturing Goa in slow motion: friendship, boredom, and the haze of vacation before the semester returns.",
     synopsis:
-      "summer — a 2022 short from FMAC capturing Goa in slow motion: friendship, boredom, and the haze of vacation before the semester returns.",
+      "summer, a 2022 short from FMAC capturing Goa in slow motion: friendship, boredom, and the haze of vacation before the semester returns.",
     releaseYear: 2022,
     posterUrl: "https://img.youtube.com/vi/rECHXAmsubw/sddefault.jpg",
     thumbnailUrl: "https://img.youtube.com/vi/rECHXAmsubw/sddefault.jpg",
@@ -89,9 +89,9 @@ export const DEV_FILMS: Movie[] = [
     title: "Nishachar",
     tagline: "A FMAC original",
     description:
-      "Nishachar — an original short from FMAC, the Film Making Club at BITS Goa. Written, directed, and produced by students. Runtime 11:57.",
+      "Nishachar, an original short from FMAC, the Film Making Club at BITS Goa. Written, directed, and produced by students. Runtime 11:57.",
     synopsis:
-      "Nishachar — an original short from FMAC, the Film Making Club at BITS Goa. Written, directed, and produced by students. Runtime 11:57.",
+      "Nishachar, an original short from FMAC, the Film Making Club at BITS Goa. Written, directed, and produced by students. Runtime 11:57.",
     releaseYear: 2026,
     posterUrl: "https://img.youtube.com/vi/QqpWt_h96n0/maxresdefault.jpg",
     thumbnailUrl: "https://img.youtube.com/vi/QqpWt_h96n0/hqdefault.jpg",

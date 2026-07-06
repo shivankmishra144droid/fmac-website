@@ -31,7 +31,7 @@ export function MoviesGrid({ movies }: { movies: Movie[] }) {
       <PageHeader
         eyebrow="The Filmography"
         title="Movies"
-        description="Every frame we've committed to — streamed from the FMAC YouTube channel."
+        description="Every frame we've committed to, streamed from the FMAC YouTube channel."
       />
 
       <section className="relative mx-auto max-w-6xl px-6 pb-28">

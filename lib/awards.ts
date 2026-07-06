@@ -34,11 +34,11 @@ export const AWARDS: Award[] = [
   },
   {
     id: "ifp-fish-molee-2024",
-    festival: "IFP 50 HOUR WRITING CHALLENGE — SEASON 15",
+    festival: "IFP 50 HOUR WRITING CHALLENGE, SEASON 15",
     award: "SILVER SHORT SCRIPT OF THE YEAR",
     film: "FISH MOLEE",
     description:
-      "We at FMaC BITS Goa are thrilled to share that our script, Fish Molee, won the Silver Short Script of the Year Award — the result of 50 hours of intense brainstorming, writing, rewriting, and pushing through deadlines together.",
+      "We at FMaC BITS Goa are thrilled to share that our script, Fish Molee, won the Silver Short Script of the Year Award, the result of 50 hours of intense brainstorming, writing, rewriting, and pushing through deadlines together.",
     year: "2024",
     backgroundUrl: "/awards/fish-molee.jpg",
     images: ["/awards/fish-molee.jpg"],
@@ -49,7 +49,7 @@ export const AWARDS: Award[] = [
     award: "WINNER",
     film: "RAKSHASA",
     description:
-      "Rakshasa — FMAC's horror short — travelled to JIFF 2024 and took home the top prize, proof that student crews can compete on a national festival stage.",
+      "Rakshasa, FMAC's horror short, travelled to JIFF 2024 and took home the top prize, proof that student crews can compete on a national festival stage.",
     year: "2024",
     backgroundUrl: "https://img.youtube.com/vi/hg3YkJYvOy0/maxresdefault.jpg",
     images: ["https://img.youtube.com/vi/hg3YkJYvOy0/maxresdefault.jpg"],
