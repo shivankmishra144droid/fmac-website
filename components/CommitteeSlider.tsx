@@ -11,16 +11,9 @@ import { motion, useReducedMotion, type PanInfo } from "framer-motion";
 import { COMMITTEE_PHOTOS } from "@/lib/committeePhotos";
 import { OdometerYearLabel } from "@/components/OdometerYearLabel";
 import { OldFilmOverlay } from "@/components/OldFilmOverlay";
-import { ProjectorIcon } from "@/components/ProjectorIcon";
-import { ProjectorSliderBeam } from "@/components/ProjectorSliderBeam";
 import { ProjectorSoundToggle } from "@/components/ProjectorSoundToggle";
 import { TiltPhoto } from "@/components/TiltPhoto";
 import { useProjectorSound } from "@/hooks/useProjectorSound";
-import {
-  FILM_FLICKER_OPACITY,
-  FILM_FLICKER_S,
-  PROJECTOR_JUDDER_PHOTO,
-} from "@/lib/projector-timing";
 
 const AUTO_MS = 5500;
 const GATE_EASE = [0.55, 0.06, 0.68, 0.19] as const;
@@ -51,24 +44,9 @@ function useLowPowerFallback() {
   return lowPower;
 }
 
-function useMobileLayout() {
-  const [mobile, setMobile] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const update = () => setMobile(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
-  return mobile;
-}
-
 export function CommitteeSlider() {
   const reduceMotion = useReducedMotion();
   const lowPower = useLowPowerFallback();
-  const isMobile = useMobileLayout();
   const photos = COMMITTEE_PHOTOS;
   const count = photos.length;
 
@@ -260,92 +238,29 @@ export function CommitteeSlider() {
           />
         </div>
 
-        {/* Projector rig + beam + photo */}
-        <div className="relative flex flex-col overflow-visible md:flex-row md:items-stretch">
-          {motionOn && (
-            <ProjectorSliderBeam mobile={isMobile} className="z-0" />
-          )}
-
-          {/* Mobile: compact projector top-left */}
-          {motionOn && (
-            <div className="pointer-events-none absolute left-0 top-0 z-20 h-[4.5rem] w-[3.25rem] md:hidden">
-              <ProjectorIcon animate className="h-full w-full" />
-            </div>
-          )}
-
-          {/* Desktop: projector column */}
-          <div className="relative z-10 hidden w-[17%] max-w-[148px] shrink-0 items-center justify-end pr-2 md:flex">
-            <div className="aspect-[3/4] w-full max-h-[min(240px,36vh)]">
-              <ProjectorIcon animate={motionOn} className="h-full w-full" />
-            </div>
-          </div>
-
-          {/* Soft bridge at projector-to-photo seam */}
-          {motionOn && (
-            <div
-              aria-hidden
-              className={`pointer-events-none absolute z-[1] ${
-                isMobile
-                  ? "left-[4%] right-[4%] top-[3.5rem] h-20"
-                  : "inset-y-[8%] hidden w-28 md:block md:w-36"
-              }`}
-              style={
-                isMobile
-                  ? {
-                      background:
-                        "linear-gradient(to bottom, rgba(246,196,83,0.22) 0%, rgba(246,196,83,0.1) 40%, rgba(234,179,8,0.04) 70%, transparent 100%)",
-                      filter: "blur(12px)",
-                    }
-                  : {
-                      left: "max(10%, calc(17% - 2.5rem))",
-                      background:
-                        "linear-gradient(to right, rgba(246,196,83,0.2) 0%, rgba(246,196,83,0.1) 35%, rgba(234,179,8,0.04) 65%, transparent 100%)",
-                      filter: "blur(10px)",
-                    }
-              }
-            />
-          )}
-
-          {/* Projected photo — overlaps beam tail so the frame occludes the fade */}
-          <div className="relative z-[2] min-w-0 flex-1 md:-ml-8 lg:-ml-10 shadow-[4px_22px_38px_rgba(0,0,0,0.55),0_0_32px_rgba(234,179,8,0.08)]">
-            <div
-              ref={frameRef}
-              className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
-            >
-              {/* Warm beam landing on photo surface + soft left-edge shadow */}
-              {motionOn && (
-                <>
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-0 left-0 z-[7] w-[min(32%,180px)] bg-gradient-to-r from-beam/28 via-beam/10 to-transparent mix-blend-soft-light"
-                  />
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-0 left-0 z-[7] w-[min(20%,120px)] bg-gradient-to-r from-ink/60 via-ink/20 to-transparent"
-                  />
-                </>
-              )}
+        {/* Committee photo — full width, aged-film overlay */}
+        <div className="relative w-full shadow-[0_22px_38px_rgba(0,0,0,0.55)]">
+          <div
+            ref={frameRef}
+            className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
+          >
+            <OldFilmOverlay className="absolute inset-0 z-[1]">
               <motion.div
                 className="absolute inset-0"
                 animate={
                   !motionOn
                     ? undefined
                     : phase === "punch"
-                      ? { scale: [1.045, 1], opacity: 1 }
-                      : phase === "idle"
-                        ? PROJECTOR_JUDDER_PHOTO.animate
-                        : undefined
+                      ? { scale: [1.045, 1] }
+                      : undefined
                 }
                 transition={
                   phase === "punch"
                     ? { duration: 0.16, ease: [0.16, 1, 0.3, 1] }
-                    : PROJECTOR_JUDDER_PHOTO.transition
+                    : undefined
                 }
                 style={{
-                  willChange:
-                    motionOn && (phase === "idle" || phase === "punch")
-                      ? "transform"
-                      : undefined,
+                  willChange: motionOn && phase === "punch" ? "transform" : undefined,
                 }}
               >
                 <TiltPhoto
@@ -357,75 +272,58 @@ export function CommitteeSlider() {
                   disableTilt={disableTilt || phase !== "idle"}
                   kenBurnsMs={AUTO_MS}
                 />
-                {motionOn && phase === "idle" && (
-                  <motion.div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 z-[4] bg-beam-soft mix-blend-soft-light"
-                    animate={{
-                      opacity: [...FILM_FLICKER_OPACITY].map((v) => (1 - v) * 0.14),
-                    }}
-                    transition={{
-                      duration: FILM_FLICKER_S,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    style={{ willChange: "opacity" }}
-                  />
-                )}
               </motion.div>
+            </OldFilmOverlay>
 
-              {motionOn && phase === "flicker" && <FlickerOverlay />}
-              {motionOn && phase === "black" && (
-                <div className="pointer-events-none absolute inset-0 z-50 bg-ink" />
-              )}
-              {motionOn && phase === "leader" && <LeaderFlash />}
-              {motionOn && phase === "leader" && (
-                <FilmGateLine key={gatePulse} travel={frameHeight} />
-              )}
+            {motionOn && phase === "flicker" && <FlickerOverlay />}
+            {motionOn && phase === "black" && (
+              <div className="pointer-events-none absolute inset-0 z-50 bg-ink" />
+            )}
+            {motionOn && phase === "leader" && <LeaderFlash />}
+            {motionOn && phase === "leader" && (
+              <FilmGateLine key={gatePulse} travel={frameHeight} />
+            )}
 
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-ink via-ink/15 to-ink/10 opacity-75"
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-ink via-ink/15 to-ink/10 opacity-75"
+            />
+
+            {motionOn && (
+              <motion.div
+                className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.14}
+                dragMomentum={false}
+                onDragEnd={onSwipeEnd}
               />
+            )}
 
-              <OldFilmOverlay className="z-[6]" />
-
-              {motionOn && (
-                <motion.div
-                  className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.14}
-                  dragMomentum={false}
-                  onDragEnd={onSwipeEnd}
-                />
-              )}
-
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4 pt-20 sm:px-6 sm:pb-5">
-                <OdometerYearLabel
-                  year={active.year}
-                  reduceMotion={Boolean(reduceMotion)}
-                  className="type-display-heading text-xl tracking-display text-parchment sm:text-display-sm"
-                />
-              </div>
-
-              <NavArrow
-                direction="prev"
-                onClick={prev}
-                pressing={pressingArrow === "prev"}
-                onPressStart={() => setPressingArrow("prev")}
-                onPressEnd={() => setPressingArrow(null)}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4 pt-20 sm:px-6 sm:pb-5">
+              <OdometerYearLabel
+                year={active.year}
                 reduceMotion={Boolean(reduceMotion)}
-              />
-              <NavArrow
-                direction="next"
-                onClick={next}
-                pressing={pressingArrow === "next"}
-                onPressStart={() => setPressingArrow("next")}
-                onPressEnd={() => setPressingArrow(null)}
-                reduceMotion={Boolean(reduceMotion)}
+                className="type-display-heading text-xl tracking-display text-parchment sm:text-display-sm"
               />
             </div>
+
+            <NavArrow
+              direction="prev"
+              onClick={prev}
+              pressing={pressingArrow === "prev"}
+              onPressStart={() => setPressingArrow("prev")}
+              onPressEnd={() => setPressingArrow(null)}
+              reduceMotion={Boolean(reduceMotion)}
+            />
+            <NavArrow
+              direction="next"
+              onClick={next}
+              pressing={pressingArrow === "next"}
+              onPressStart={() => setPressingArrow("next")}
+              onPressEnd={() => setPressingArrow(null)}
+              reduceMotion={Boolean(reduceMotion)}
+            />
           </div>
         </div>
       </div>
