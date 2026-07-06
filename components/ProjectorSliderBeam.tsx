@@ -24,9 +24,22 @@ export type ProjectorSliderBeamProps = {
   mobile?: boolean;
 };
 
+/** Wide horizontal falloff — no clip-path or mask (avoids hard seam) */
+const DESKTOP_BEAM =
+  "linear-gradient(to right, rgba(255,217,138,0.34) 0%, rgba(246,196,83,0.22) 7%, rgba(246,196,83,0.14) 14%, rgba(234,179,8,0.09) 20%, rgba(234,179,8,0.055) 26%, rgba(234,179,8,0.03) 32%, rgba(234,179,8,0.014) 38%, rgba(234,179,8,0.006) 42%, transparent 48%)";
+
+const DESKTOP_GLOW =
+  "radial-gradient(ellipse 110% 80% at 4% 50%, rgba(255,217,138,0.36) 0%, rgba(246,196,83,0.14) 32%, rgba(246,196,83,0.05) 52%, transparent 72%)";
+
+const MOBILE_BEAM =
+  "linear-gradient(to bottom, rgba(255,217,138,0.3) 0%, rgba(246,196,83,0.16) 12%, rgba(234,179,8,0.08) 22%, rgba(234,179,8,0.035) 32%, rgba(234,179,8,0.012) 40%, transparent 50%)";
+
+const MOBILE_GLOW =
+  "radial-gradient(ellipse 80% 60% at 18% 12%, rgba(255,217,138,0.28) 0%, rgba(246,196,83,0.1) 40%, transparent 68%)";
+
 /**
- * Conical light beam from projector lens to photo — warm gradient,
- * breathing pulse, dust motes confined to the beam path.
+ * Conical light beam from projector lens to photo — gradient-only falloff,
+ * extends under the photo's left edge (photo sits above and occludes the tail).
  */
 export function ProjectorSliderBeam({
   className = "",
@@ -39,7 +52,7 @@ export function ProjectorSliderBeam({
     setDust(
       Array.from({ length: 12 }, (_, i) => ({
         id: i,
-        left: 8 + Math.random() * 72,
+        left: mobile ? 10 + Math.random() * 70 : 4 + Math.random() * 38,
         top: mobile ? 15 + Math.random() * 55 : 22 + Math.random() * 56,
         size: 1 + Math.random() * 2.2,
         duration: 6 + Math.random() * 7,
@@ -49,21 +62,15 @@ export function ProjectorSliderBeam({
     );
   }, [mobile]);
 
-  const clip = mobile
-    ? "polygon(4% 8%, 88% 28%, 96% 72%, 12% 58%)"
-    : "polygon(0% 38%, 100% 14%, 100% 86%, 0% 62%)";
-
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
-      style={{ clipPath: clip }}
+      className={`pointer-events-none absolute inset-0 z-0 ${className}`}
     >
       <motion.div
         className="absolute inset-0"
         style={{
-          background:
-            "linear-gradient(105deg, rgba(246,196,83,0.22) 0%, rgba(246,196,83,0.12) 35%, rgba(234,179,8,0.06) 62%, transparent 88%)",
+          background: mobile ? MOBILE_BEAM : DESKTOP_BEAM,
           willChange: "opacity, transform",
         }}
         animate={
@@ -81,8 +88,7 @@ export function ProjectorSliderBeam({
       <motion.div
         className="absolute inset-0"
         style={{
-          background:
-            "radial-gradient(ellipse 90% 70% at 8% 50%, rgba(255,217,138,0.28) 0%, rgba(246,196,83,0.1) 40%, transparent 72%)",
+          background: mobile ? MOBILE_GLOW : DESKTOP_GLOW,
           willChange: "opacity",
         }}
         animate={reduce ? { opacity: 0.7 } : { opacity: [0.55, 0.88, 0.62, 0.8, 0.55] }}
@@ -91,14 +97,6 @@ export function ProjectorSliderBeam({
             ? undefined
             : { duration: BEAM_PULSE_S, repeat: Infinity, ease: "easeInOut" }
         }
-      />
-
-      <div
-        className="absolute inset-0 opacity-60"
-        style={{
-          background:
-            "linear-gradient(180deg, transparent 0%, rgba(11,9,6,0.15) 100%)",
-        }}
       />
 
       <div className="absolute inset-0">

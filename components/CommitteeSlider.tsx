@@ -261,7 +261,7 @@ export function CommitteeSlider() {
         </div>
 
         {/* Projector rig + beam + photo */}
-        <div className="relative flex flex-col md:flex-row md:items-stretch">
+        <div className="relative flex flex-col overflow-visible md:flex-row md:items-stretch">
           {motionOn && (
             <ProjectorSliderBeam mobile={isMobile} className="z-0" />
           )}
@@ -280,12 +280,51 @@ export function CommitteeSlider() {
             </div>
           </div>
 
-          {/* Projected photo */}
-          <div className="relative z-[1] min-w-0 flex-1 shadow-[0_22px_38px_rgba(0,0,0,0.55),0_0_32px_rgba(234,179,8,0.08)]">
+          {/* Soft bridge at projector-to-photo seam */}
+          {motionOn && (
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute z-[1] ${
+                isMobile
+                  ? "left-[4%] right-[4%] top-[3.5rem] h-20"
+                  : "inset-y-[8%] hidden w-28 md:block md:w-36"
+              }`}
+              style={
+                isMobile
+                  ? {
+                      background:
+                        "linear-gradient(to bottom, rgba(246,196,83,0.22) 0%, rgba(246,196,83,0.1) 40%, rgba(234,179,8,0.04) 70%, transparent 100%)",
+                      filter: "blur(12px)",
+                    }
+                  : {
+                      left: "max(10%, calc(17% - 2.5rem))",
+                      background:
+                        "linear-gradient(to right, rgba(246,196,83,0.2) 0%, rgba(246,196,83,0.1) 35%, rgba(234,179,8,0.04) 65%, transparent 100%)",
+                      filter: "blur(10px)",
+                    }
+              }
+            />
+          )}
+
+          {/* Projected photo — overlaps beam tail so the frame occludes the fade */}
+          <div className="relative z-[2] min-w-0 flex-1 md:-ml-8 lg:-ml-10 shadow-[4px_22px_38px_rgba(0,0,0,0.55),0_0_32px_rgba(234,179,8,0.08)]">
             <div
               ref={frameRef}
               className="relative aspect-[16/9] w-full overflow-hidden bg-ink-800"
             >
+              {/* Warm beam landing on photo surface + soft left-edge shadow */}
+              {motionOn && (
+                <>
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 left-0 z-[7] w-[min(32%,180px)] bg-gradient-to-r from-beam/28 via-beam/10 to-transparent mix-blend-soft-light"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 left-0 z-[7] w-[min(20%,120px)] bg-gradient-to-r from-ink/60 via-ink/20 to-transparent"
+                  />
+                </>
+              )}
               <motion.div
                 className="absolute inset-0"
                 animate={

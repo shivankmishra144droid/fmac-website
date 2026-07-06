@@ -77,7 +77,7 @@ export function OldFilmOverlay({
                 left: 5 + Math.random() * 90,
                 top: 8 + Math.random() * 84,
                 size: 1 + Math.random() * 2.2,
-                tone: Math.random() < 0.45 ? "light" : "dark",
+                tone: Math.random() < 0.45 ? ("light" as const) : ("dark" as const),
               },
             ];
         return next.slice(-10);
