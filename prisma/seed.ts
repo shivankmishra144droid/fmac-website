@@ -129,22 +129,6 @@ async function main() {
     });
   }
 
-  const locData = {
-    name: "FMAC Screening Room",
-    address:
-      "Auditorium Complex, BITS Pilani, K.K. Birla Goa Campus, NH-17B, Zuarinagar, Goa 403726, India",
-    mapEmbedUrl:
-      "https://www.google.com/maps?q=BITS+Pilani+KK+Birla+Goa+Campus&output=embed",
-    description:
-      "Screenings and club meets happen here. Doors open just before showtime. Come early, the good seats fill fast.",
-  };
-  const existingLoc = await prisma.locationInfo.findFirst();
-  if (existingLoc) {
-    await prisma.locationInfo.update({ where: { id: existingLoc.id }, data: locData });
-  } else {
-    await prisma.locationInfo.create({ data: locData });
-  }
-
   const achievements = [
     {
       title: "Spree '26 Premiere",

@@ -58,7 +58,6 @@ npm run sync:youtube    # preferred: full sync with dates
 | `/library` | Tenure-organised film catalogue (YouTube embeds) |
 | `/library/[slug]` | Single film with embedded player |
 | `/achievements` | Festival laurels |
-| `/location-map` | Venue + map |
 | `/admin/login` | Admin sign-in |
 | `/admin/dashboard` | Movie CRUD |
 

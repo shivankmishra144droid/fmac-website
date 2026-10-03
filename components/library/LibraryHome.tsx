@@ -1,24 +1,21 @@
 "use client";
 
-import { useMemo, useCallback, useTransition } from "react";
+import { useCallback, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Movie } from "@prisma/client";
-import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
-import {
-  filterTenuresFrom2022,
-  getMoviePublishedAt,
-  groupMoviesByTenure,
-  type TenureGroup,
-} from "@/lib/tenure";
+import { motion, useReducedMotion } from "framer-motion";
+import { filterTenuresFrom2022, groupMoviesByTenure, type TenureGroup } from "@/lib/tenure";
 import { getMovieContentType } from "@/lib/content-type";
 import {
+  LIBRARY_CATEGORIES,
   filterMoviesByCategory,
   getCategoryBySlug,
   parseCategorySlug,
   type LibraryCategorySlug,
 } from "@/lib/library-categories";
-import { LandscapeCard } from "./PosterCard";
-import { CategoryPillBar } from "./CategoryPillBar";
+import { FilmCard } from "./FilmCard";
+
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 type LibraryHomeProps = {
   movies: Movie[];
@@ -27,34 +24,31 @@ type LibraryHomeProps = {
   dbSeeded?: boolean;
 };
 
-export function LibraryHome(props: LibraryHomeProps) {
-  return <LibraryHomeInner {...props} />;
+/** Corner tag for a card: Aaja / Freshers markers first, then award winners. */
+function cardTag(movie: Movie, awardTitles: Set<string>, aajaId?: string | null): string | null {
+  const type = getMovieContentType(movie);
+  if (movie.id === aajaId || type === "AAJA") return "Aaja";
+  if (type === "FRESHERS") return "Freshers";
+  if (movie.isFmacSelect || awardTitles.has(movie.title.toLowerCase())) return "Select";
+  return null;
 }
 
-function LibraryHomeInner({
-  movies,
-  awardTitles,
-  dbConnected,
-  dbSeeded,
-}: LibraryHomeProps) {
+export function LibraryHome({ movies, awardTitles, dbConnected, dbSeeded }: LibraryHomeProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reduceMotion = useReducedMotion();
+  const reduce = useReducedMotion();
   const [, startTransition] = useTransition();
 
   const activeCategory = parseCategorySlug(searchParams.get("category"));
-
   const published = useMemo(() => movies.filter((m) => m.youtubeId), [movies]);
-
   const tenures = useMemo(
     () => filterTenuresFrom2022(groupMoviesByTenure(published)),
     [published]
   );
-
-  const categoryMovies = useMemo(() => {
-    if (!activeCategory) return [];
-    return filterMoviesByCategory(published, activeCategory);
-  }, [published, activeCategory]);
+  const categoryMovies = useMemo(
+    () => (activeCategory ? filterMoviesByCategory(published, activeCategory) : []),
+    [published, activeCategory]
+  );
 
   const selectCategory = useCallback(
     (slug: LibraryCategorySlug | null) => {
@@ -69,202 +63,167 @@ function LibraryHomeInner({
     [router, searchParams, startTransition]
   );
 
-  const exitDuration = reduceMotion ? 0.08 : 0.15;
-  const enterDuration = reduceMotion ? 0.1 : 0.22;
-  const stagger = reduceMotion ? 0 : 0.05;
-
-  const viewMotion = {
-    initial: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 },
-    animate: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: enterDuration, ease: [0.22, 1, 0.36, 1] },
-    },
-    exit: reduceMotion
-      ? { opacity: 0, transition: { duration: exitDuration } }
-      : { opacity: 0, y: 8, transition: { duration: exitDuration, ease: [0.4, 0, 1, 1] } },
+  // Enter-only: keyed views swap instantly and fade in (no exit wait that could strand a blank view).
+  const view = {
+    initial: reduce ? { opacity: 0 } : { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
   };
 
-  const listMotion = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: stagger, delayChildren: reduceMotion ? 0 : 0.04 },
-    },
-  };
-
-  const itemMotion = {
-    hidden: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: enterDuration, ease: [0.22, 1, 0.36, 1] },
-    },
-  };
-
-  if (movies.length === 0) {
-    return (
-      <div className="px-6 py-24 text-center">
-        <p className="text-label text-white/50">No films synced yet.</p>
-        <p className="type-meta mt-2 text-white/30">
-          Run <code className="text-white/50">npm run db:seed</code> after setting up Postgres.
-        </p>
-      </div>
-    );
-  }
-
-  const viewKey = activeCategory ?? "all";
+  const tabs: { slug: LibraryCategorySlug | null; label: string }[] = [
+    { slug: null, label: "By tenure" },
+    ...LIBRARY_CATEGORIES.map((c) => ({ slug: c.slug, label: c.label })),
+  ];
 
   return (
-    <div className="pb-28 pt-4">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <h1 className="type-display-heading text-display-sm text-white/90">
-          Library
-        </h1>
-      </div>
+    <div className="pb-32">
+      {/* Header */}
+      <header className="px-5 pb-12 pt-36 md:px-24 md:pb-16 md:pt-48">
+        <div className="grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
+          <div>
+            <h1 className="headline text-[clamp(3.25rem,9vw,9rem)] text-bone">
+              The <span className="italic text-bone/60">library.</span>
+            </h1>
+            <p className="mt-8 max-w-xl text-base leading-relaxed text-bone/60 md:text-lg">
+              Every FMAC film, grouped by tenure. Each year opens with its Aaja.
+            </p>
+          </div>
+          <p className="kicker text-bone/40 md:text-right">
+            <span className="block font-serif text-6xl normal-case tracking-normal text-bone">
+              {published.length}
+            </span>
+            Films on the shelf
+          </p>
+        </div>
 
-      <div className="mt-4 px-4 sm:px-6 lg:px-8">
-        <CategoryPillBar activeSlug={activeCategory} onSelect={selectCategory} />
-      </div>
+        {/* Category tabs */}
+        <nav
+          aria-label="Browse by"
+          className="no-scrollbar -mx-5 mt-14 flex gap-8 overflow-x-auto border-b border-hairline px-5 md:mx-0 md:px-0"
+        >
+          {tabs.map((t) => {
+            const on = t.slug === activeCategory;
+            return (
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => selectCategory(t.slug)}
+                aria-current={on ? "page" : undefined}
+                className={`kicker relative shrink-0 pb-4 transition-colors ${
+                  on ? "text-bone" : "text-bone/40 hover:text-bone/75"
+                }`}
+              >
+                {t.label}
+                {on && (
+                  <motion.span
+                    layoutId="library-tab"
+                    className="absolute inset-x-0 -bottom-px h-px bg-beam"
+                    transition={{ duration: reduce ? 0 : 0.4, ease: EASE }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-      {dbConnected === false && (
-        <StatusBanner className="mt-6">
-          Showing demo films. Postgres is not running.
-        </StatusBanner>
-      )}
-      {dbConnected === true && dbSeeded === false && (
-        <StatusBanner className="mt-6">
-          Database is empty. Run <code className="text-white/65">npm run db:seed</code> to load films.
-        </StatusBanner>
-      )}
+        {dbConnected === false && (
+          <p className="kicker mt-6 text-bone/30">Offline catalogue · database not connected</p>
+        )}
+        {dbConnected === true && dbSeeded === false && (
+          <p className="kicker mt-6 text-bone/30">Database is empty · run npm run db:seed</p>
+        )}
+      </header>
 
-      <div className="mt-8 px-4 sm:px-6 lg:px-8">
-        <AnimatePresence mode="wait" initial={false}>
+      {movies.length === 0 ? (
+        <p className="px-5 py-24 text-center text-bone/50 md:px-24">No films synced yet.</p>
+      ) : (
+        <>
           {activeCategory ? (
-            <motion.div key={viewKey} {...viewMotion}>
-              <CategorySection
-                slug={activeCategory}
-                movies={categoryMovies}
-                awardTitles={awardTitles}
-                listMotion={listMotion}
-                itemMotion={itemMotion}
-              />
+            <motion.div key={activeCategory} {...view} className="px-5 md:px-24">
+              <CategoryGrid slug={activeCategory} movies={categoryMovies} awardTitles={awardTitles} />
             </motion.div>
           ) : (
-            <motion.div key="all" {...viewMotion}>
-              <motion.div variants={listMotion} initial="hidden" animate="show">
-                <div className="space-y-10">
-                  {tenures.map((group) => (
-                    <motion.div key={group.label + group.startYear} variants={itemMotion}>
-                      <TenureRow group={group} awardTitles={awardTitles} />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+            <motion.div key="tenures" {...view} className="space-y-20 md:space-y-28">
+              {tenures.map((group, i) => (
+                <TenureRow key={group.label + group.startYear} group={group} awardTitles={awardTitles} eager={i === 0} />
+              ))}
             </motion.div>
           )}
-        </AnimatePresence>
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
-function StatusBanner({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <p
-      className={`mx-4 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-label text-white/45 sm:mx-6 lg:mx-8 ${className}`}
-    >
-      {children}
-    </p>
-  );
-}
-
-function CategorySection({
-  slug,
-  movies,
-  awardTitles,
-  listMotion,
-  itemMotion,
-}: {
-  slug: LibraryCategorySlug;
-  movies: Movie[];
-  awardTitles: Set<string>;
-  listMotion: Variants;
-  itemMotion: Variants;
-}) {
-  const category = getCategoryBySlug(slug);
-
-  return (
-    <section>
-      <div className="mb-6">
-        <p className="type-eyebrow text-white/40">Browsing</p>
-        <h2 className="type-display-heading mt-1 text-display-sm text-white/85">
-          {category.label}{" "}
-          <span className="type-meta font-normal normal-case text-white/40">
-            · {movies.length} {movies.length === 1 ? "film" : "films"}
-          </span>
-        </h2>
-      </div>
-
-      {movies.length === 0 ? (
-        <p className="py-16 text-center text-label text-white/40">
-          No films in this category yet.
-        </p>
-      ) : (
-        <motion.div
-          className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3"
-          variants={listMotion}
-          initial="hidden"
-          animate="show"
-        >
-          {movies.map((movie) => (
-            <motion.div key={movie.id} variants={itemMotion}>
-              <LandscapeCard
-                movie={movie}
-                fluid
-                awardWinner={awardTitles.has(movie.title.toLowerCase())}
-                isAajaMarker={getMovieContentType(movie) === "AAJA"}
-                isFreshers={getMovieContentType(movie) === "FRESHERS"}
-              />
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-    </section>
-  );
+function tenureTitle(group: TenureGroup): string {
+  if (group.startYear > 0) return `${group.startYear} – ${String(group.startYear + 1).slice(-2)}`;
+  if (group.label === "founding") return "Founding years";
+  if (group.label === "undated") return "Undated";
+  return "Catalogue";
 }
 
 function TenureRow({
   group,
   awardTitles,
+  eager,
 }: {
   group: TenureGroup;
   awardTitles: Set<string>;
+  eager?: boolean;
 }) {
+  const id = `tenure-${group.label}`;
   return (
-    <section>
-      <div className="mb-3">
-        <h2 className="type-display-heading text-display-sm tracking-display text-white/80">
-          {group.displayLabel}
+    <section id={id} data-rail={tenureTitle(group)} aria-labelledby={`${id}-h`}>
+      <div className="mb-6 flex items-end justify-between gap-6 px-5 md:px-24">
+        <h2 id={`${id}-h`} className="headline text-[clamp(2.25rem,4.5vw,4rem)] text-bone">
+          {tenureTitle(group)}
         </h2>
+        <p className="kicker shrink-0 pb-2 text-bone/40">
+          {group.films.length} {group.films.length === 1 ? "film" : "films"}
+        </p>
       </div>
-      <div className="library-scroll flex items-start gap-2 overflow-x-auto pb-8 pt-3 sm:gap-2.5">
-        {group.films.map((movie) => (
-          <LandscapeCard
+      <div className="no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-5 px-5 pb-2 md:scroll-px-24 md:px-24">
+        {group.films.map((movie, i) => (
+          <FilmCard
             key={movie.id}
             movie={movie}
-            awardWinner={awardTitles.has(movie.title.toLowerCase())}
-            isAajaMarker={group.aajaFilm?.id === movie.id}
-            isFreshers={getMovieContentType(movie) === "FRESHERS"}
+            tag={cardTag(movie, awardTitles, group.aajaFilm?.id)}
+            priority={eager && i < 3}
           />
         ))}
+        {/* Trailing spacer so the last card can snap clear of the right gutter. */}
+        <span aria-hidden className="w-px shrink-0" />
       </div>
+    </section>
+  );
+}
+
+function CategoryGrid({
+  slug,
+  movies,
+  awardTitles,
+}: {
+  slug: LibraryCategorySlug;
+  movies: Movie[];
+  awardTitles: Set<string>;
+}) {
+  const category = getCategoryBySlug(slug);
+  return (
+    <section>
+      <div className="mb-10 flex items-end justify-between gap-6">
+        <h2 className="headline text-[clamp(2.25rem,4.5vw,4rem)] text-bone">{category.label}</h2>
+        <p className="kicker shrink-0 pb-2 text-bone/40">
+          {movies.length} {movies.length === 1 ? "film" : "films"}
+        </p>
+      </div>
+      {movies.length === 0 ? (
+        <p className="py-16 text-center text-bone/40">No films in this category yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
+          {movies.map((movie, i) => (
+            <FilmCard key={movie.id} movie={movie} fluid tag={cardTag(movie, awardTitles)} priority={i < 3} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import type { Movie } from "@prisma/client";
-import { formatRuntime } from "@/lib/youtube";
-import { movieHref } from "@/lib/slug";
-import { LandscapeCard } from "./PosterCard";
+import { FilmCard } from "./FilmCard";
 
 const WATCHLIST_KEY = "fmac-watchlist";
+const CHANGE_EVENT = "fmac-watchlist-change";
 
 export function getWatchlistIds(): string[] {
   if (typeof window === "undefined") return [];
@@ -21,147 +19,116 @@ export function getWatchlistIds(): string[] {
 }
 
 export function setWatchlistIds(ids: string[]) {
-  localStorage.setItem(WATCHLIST_KEY, JSON.stringify(ids));
+  try {
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(ids));
+  } catch {
+    /* storage blocked — watchlist just won't persist */
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
 export function toggleWatchlistId(id: string): string[] {
   const current = getWatchlistIds();
-  const next = current.includes(id)
-    ? current.filter((x) => x !== id)
-    : [...current, id];
+  const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
   setWatchlistIds(next);
   return next;
 }
 
+const TYPES = [
+  { key: "ALL", label: "Everything" },
+  { key: "SHORT", label: "Shorts" },
+  { key: "MOVIE", label: "Features" },
+  { key: "DOCUMENTARY", label: "Documentaries" },
+  { key: "EXPERIMENTAL", label: "Experimental" },
+] as const;
+
 export function WatchlistPage({ movies }: { movies: Movie[] }) {
   const [ids, setIds] = useState<string[]>([]);
-  const [yearFilter, setYearFilter] = useState<number | "ALL">("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [ready, setReady] = useState(false);
+  const [type, setType] = useState<(typeof TYPES)[number]["key"]>("ALL");
 
+  // Stay in sync when a card's Save toggle changes the list on this page.
   useEffect(() => {
-    setIds(getWatchlistIds());
+    const sync = () => setIds(getWatchlistIds());
+    sync();
+    setReady(true);
+    window.addEventListener(CHANGE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
-  const watchlist = useMemo(() => {
-    return movies.filter((m) => ids.includes(m.id));
-  }, [movies, ids]);
-
-  const filtered = useMemo(() => {
-    return watchlist.filter((m) => {
-      if (yearFilter !== "ALL" && m.releaseYear !== yearFilter) return false;
-      if (categoryFilter !== "ALL" && m.category !== categoryFilter) return false;
-      return true;
-    });
-  }, [watchlist, yearFilter, categoryFilter]);
-
-  const featured = filtered[0] ?? watchlist[0];
-  const rest = featured ? filtered.filter((m) => m.id !== featured.id) : filtered;
-
-  const years = [...new Set(watchlist.map((m) => m.releaseYear))].sort((a, b) => b - a);
-
-  if (watchlist.length === 0) {
-    return (
-      <div className="px-6 py-20 text-center">
-        <p className="text-label text-white/50">Your watchlist is empty.</p>
-        <Link href="/library" className="mt-4 inline-block text-label font-medium text-marquee hover:underline">
-          Browse the library
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8 px-4 pb-28 pt-6 sm:px-6">
-      <div className="flex flex-wrap gap-2">
-        <FilterPill active={categoryFilter === "ALL"} onClick={() => setCategoryFilter("ALL")}>
-          All
-        </FilterPill>
-        {["MOVIE", "SHORT", "DOCUMENTARY", "EXPERIMENTAL"].map((cat) => (
-          <FilterPill
-            key={cat}
-            active={categoryFilter === cat}
-            onClick={() => setCategoryFilter(cat)}
-          >
-            {cat.charAt(0) + cat.slice(1).toLowerCase()}
-          </FilterPill>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <FilterPill active={yearFilter === "ALL"} onClick={() => setYearFilter("ALL")}>
-          By Year
-        </FilterPill>
-        {years.map((y) => (
-          <FilterPill key={y} active={yearFilter === y} onClick={() => setYearFilter(y)}>
-            {y}
-          </FilterPill>
-        ))}
-      </div>
-
-      {featured && (
-        <Link
-          href={movieHref(featured)}
-          className="group block overflow-hidden rounded-2xl bg-[#141414]"
-        >
-          <div className="relative aspect-[21/9] w-full">
-            {(featured.posterUrl || featured.youtubeId) && (
-              <Image
-                src={
-                  featured.posterUrl ??
-                  `https://img.youtube.com/vi/${featured.youtubeId}/maxresdefault.jpg`
-                }
-                alt=""
-                fill
-                className="object-cover transition duration-500 group-hover:scale-[1.02]"
-                sizes="100vw"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent" />
-            <div className="absolute bottom-0 p-6">
-              <p className="type-eyebrow text-white/50">Featured</p>
-              <h2 className="film-title mt-1 text-display-sm tracking-display text-white">{featured.title}</h2>
-              <p className="type-meta mt-1 text-label text-white/50">
-                {featured.releaseYear}
-                {featured.runtimeSeconds
-                  ? ` · ${formatRuntime(featured.runtimeSeconds)}`
-                  : ""}
-              </p>
-            </div>
-          </div>
-        </Link>
-      )}
-
-      {rest.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rest.map((movie) => (
-            <LandscapeCard key={movie.id} movie={movie} fluid />
-          ))}
-        </div>
-      )}
-    </div>
+  const watchlist = useMemo(() => movies.filter((m) => ids.includes(m.id)), [movies, ids]);
+  const shown = useMemo(
+    () => (type === "ALL" ? watchlist : watchlist.filter((m) => m.category === type)),
+    [watchlist, type]
   );
-}
+  const presentTypes = TYPES.filter((t) => t.key === "ALL" || watchlist.some((m) => m.category === t.key));
 
-function FilterPill({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-label transition ${
-        active
-          ? "bg-marquee font-medium text-ink"
-          : "border border-white/15 text-white/55 hover:border-marquee/40 hover:text-white"
-      }`}
-    >
-      {children}
-    </button>
+    <div className="pb-32">
+      <header className="px-5 pb-12 pt-36 md:px-24 md:pb-16 md:pt-48">
+        <div className="grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
+          <div>
+            <h1 className="headline text-[clamp(3.25rem,9vw,9rem)] text-bone">
+              Your <span className="italic text-bone/60">watchlist.</span>
+            </h1>
+            <p className="mt-8 max-w-xl text-base leading-relaxed text-bone/60 md:text-lg">
+              Films you&apos;ve saved for later. Kept on this device.
+            </p>
+          </div>
+          {ready && watchlist.length > 0 && (
+            <p className="kicker text-bone/40 md:text-right">
+              <span className="block font-serif text-6xl normal-case tracking-normal text-bone">{watchlist.length}</span>
+              Saved
+            </p>
+          )}
+        </div>
+
+        {presentTypes.length > 2 && (
+          <nav aria-label="Filter" className="no-scrollbar mt-14 flex gap-8 overflow-x-auto border-b border-hairline">
+            {presentTypes.map((t) => {
+              const on = t.key === type;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setType(t.key)}
+                  aria-pressed={on}
+                  className={`kicker relative shrink-0 pb-4 transition-colors ${on ? "text-bone" : "text-bone/40 hover:text-bone/75"}`}
+                >
+                  {t.label}
+                  {on && <span className="absolute inset-x-0 -bottom-px h-px bg-beam" />}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </header>
+
+      <div className="px-5 md:px-24">
+        {!ready ? null : watchlist.length === 0 ? (
+          <div className="border-t border-hairline py-24">
+            <p className="headline max-w-[20ch] text-[clamp(2rem,4vw,3.5rem)] text-bone/70">
+              Nothing saved yet. Hover a film and hit <span className="italic text-beam">+ Save</span>.
+            </p>
+            <Link
+              href="/library"
+              className="kicker mt-10 inline-flex items-center gap-3 bg-bone px-5 py-3.5 text-stage transition-colors hover:bg-beam"
+            >
+              Browse the library →
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
+            {shown.map((m) => (
+              <FilmCard key={m.id} movie={m} fluid />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

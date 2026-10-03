@@ -1,4 +1,5 @@
 import type { Movie } from "@prisma/client";
+import { channelFilms } from "./channel-films";
 
 /**
  * Static film catalogue used when Postgres is unavailable (local dev without Docker).
@@ -111,13 +112,33 @@ export const DEV_FILMS: Movie[] = [
   },
 ];
 
+/**
+ * Offline catalogue: the curated entries above plus every film from the committed channel dump.
+ * Curated entries win when both describe the same YouTube video.
+ */
+function allDevFilms(): Movie[] {
+  const channel = channelFilms();
+  const byYoutubeId = new Map(channel.map((m) => [m.youtubeId, m]));
+  // Curated copy, but placed at its real position in the upload order.
+  const curated = DEV_FILMS.map((m) => {
+    const match = m.youtubeId ? byYoutubeId.get(m.youtubeId) : undefined;
+    return match ? { ...m, publishedAt: match.publishedAt } : m;
+  });
+  const curatedIds = new Set(DEV_FILMS.map((m) => m.youtubeId).filter(Boolean));
+  return [...curated, ...channel.filter((m) => !curatedIds.has(m.youtubeId))];
+}
+
 export function devFilms(category?: Movie["category"]): Movie[] {
-  const films = [...DEV_FILMS].sort((a, b) => b.releaseYear - a.releaseYear);
+  const films = allDevFilms().sort(
+    (a, b) =>
+      b.releaseYear - a.releaseYear ||
+      (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0)
+  );
   return category ? films.filter((m) => m.category === category) : films;
 }
 
 export function devFilmBySlug(slug: string): Movie | null {
-  return DEV_FILMS.find((m) => m.slug === slug || m.id === slug) ?? null;
+  return allDevFilms().find((m) => m.slug === slug || m.id === slug) ?? null;
 }
 
 export function devLatestFilm(): Movie | null {

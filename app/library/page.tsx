@@ -39,9 +39,9 @@ export default async function LibraryPage() {
 
 function LibraryLoading() {
   return (
-    <div className="px-4 py-16 sm:px-6 lg:px-8">
-      <div className="h-4 w-24 animate-pulse rounded bg-white/10" />
-      <div className="mt-6 h-10 w-full max-w-xl animate-pulse rounded-full bg-white/[0.06]" />
+    <div className="px-5 pt-36 md:px-24 md:pt-48">
+      <div className="h-24 w-2/3 max-w-2xl animate-pulse bg-bone/[0.06]" />
+      <div className="mt-8 h-4 w-80 animate-pulse bg-bone/[0.05]" />
     </div>
   );
 }

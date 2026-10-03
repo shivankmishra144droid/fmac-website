@@ -28,6 +28,14 @@ const config: Config = {
           400: "#facc15",
           600: "#ca8a04",
         },
+        // Editorial palette — near-black stage, bone text, hairlines.
+        stage: {
+          DEFAULT: "#0b0a09",
+          900: "#100e0c",
+          800: "#171411",
+        },
+        bone: "#ece6da",
+        hairline: "rgba(236, 230, 218, 0.12)",
         celluloid: "#efe6d3",
         // Alias of celluloid — warm off-white used for text across pages.
         parchment: "#efe6d3",
@@ -37,6 +45,10 @@ const config: Config = {
         display: ["var(--font-display)", "Impact", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        // Editorial system (home + marketing pages).
+        serif: ["var(--font-serif)", "Iowan Old Style", "Georgia", "serif"],
+        grotesk: ["var(--font-grotesk)", "Helvetica Neue", "Arial", "sans-serif"],
+        label: ["var(--font-label)", "ui-monospace", "monospace"],
         // Legacy alias — maps to body after typography upgrade.
         sans: ["var(--font-body)", "system-ui", "sans-serif"],
       },

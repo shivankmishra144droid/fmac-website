@@ -29,7 +29,6 @@ export function MoviesGrid({ movies }: { movies: Movie[] }) {
       <div className="pointer-events-none fixed inset-x-0 top-32 h-[60vh] bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(234,179,8,0.12),transparent_70%)]" />
 
       <PageHeader
-        eyebrow="The Filmography"
         title="Movies"
         description="Every frame we've committed to, streamed from the FMAC YouTube channel."
       />

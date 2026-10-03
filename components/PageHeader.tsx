@@ -1,26 +1,18 @@
 type PageHeaderProps = {
-  eyebrow: string;
   title: string;
   description?: string;
 };
 
-/** Consistent cinematic header for interior pages (clears the fixed navbar). */
-export function PageHeader({ eyebrow, title, description }: PageHeaderProps) {
+/** Editorial header for interior pages (clears the fixed navbar). */
+export function PageHeader({ title, description }: PageHeaderProps) {
   return (
-    <header className="relative px-6 pb-10 pt-32 sm:pt-40">
-      <div className="mx-auto max-w-6xl">
-        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.42em] text-parchment/50">
-          {eyebrow}
+    <header className="relative px-5 pb-16 pt-36 md:px-24 md:pb-24 md:pt-48">
+      <h1 className="headline text-[clamp(3.25rem,9vw,9rem)] text-bone">{title}</h1>
+      {description && (
+        <p className="mt-8 max-w-xl text-base leading-relaxed text-bone/60 md:text-lg">
+          {description}
         </p>
-        <h1 className="font-display text-5xl font-black leading-[0.9] tracking-tightest text-parchment sm:text-7xl">
-          {title}
-        </h1>
-        {description && (
-          <p className="mt-6 max-w-2xl font-mono text-sm leading-relaxed text-parchment/60">
-            {description}
-          </p>
-        )}
-      </div>
+      )}
     </header>
   );
 }

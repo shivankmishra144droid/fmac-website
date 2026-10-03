@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { FilmDetail } from "@/components/library/FilmDetail";
-import { getMovie } from "@/lib/movies";
+import { getMovie, listMovies } from "@/lib/movies";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -37,5 +37,15 @@ export default async function LibraryFilmPage({
     /* db unavailable */
   }
 
-  return <FilmDetail movie={movie} awardWinner={awardWinner} />;
+  // Nearest films in time (same year first), excluding this one.
+  const all = await listMovies();
+  const related = all
+    .filter((m) => m.id !== movie.id && m.youtubeId)
+    .sort(
+      (a, b) =>
+        Math.abs(a.releaseYear - movie.releaseYear) - Math.abs(b.releaseYear - movie.releaseYear)
+    )
+    .slice(0, 8);
+
+  return <FilmDetail movie={movie} awardWinner={awardWinner} related={related} />;
 }

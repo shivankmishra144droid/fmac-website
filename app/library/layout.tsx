@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { LibraryTopBar, MobileBottomNav } from "@/components/library/LibraryChrome";
 
 export const metadata: Metadata = {
   title: "Library",
@@ -7,11 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function LibraryLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-ink font-body text-white">
-      <LibraryTopBar />
-      {children}
-      <MobileBottomNav />
-    </div>
-  );
+  return <div className="min-h-screen bg-stage">{children}</div>;
 }

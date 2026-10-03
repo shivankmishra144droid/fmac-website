@@ -29,6 +29,14 @@ export function youtubeThumbnail(id: string, quality: YoutubeThumbQuality = "hq"
   return `https://img.youtube.com/vi/${id}/${file}.jpg`;
 }
 
+/**
+ * Auto-generated frame from inside the video (1 ≈ 25%, 2 ≈ 50%, 3 ≈ 75%) — a real shot,
+ * free of the title text that custom thumbnails usually carry. Often letterboxed.
+ */
+export function youtubeFrame(id: string, n: 1 | 2 | 3 = 1): string {
+  return `https://img.youtube.com/vi/${id}/maxres${n}.jpg`;
+}
+
 type MovieThumbFields = {
   youtubeId?: string | null;
   thumbnailUrl?: string | null;
