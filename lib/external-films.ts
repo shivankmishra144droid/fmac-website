@@ -1,4 +1,4 @@
-import type { MovieCategory } from "@prisma/client";
+import type { Movie, MovieCategory } from "@prisma/client";
 import { youtubeThumbnail, youtubeWatchUrl } from "./youtube";
 
 /**
@@ -62,3 +62,16 @@ export function externalFilmToMovie(f: ExternalFilm) {
     isAajaFilm: false,
   };
 }
+
+/** External films as full Movie rows (stable ids), for read-time merging and the offline catalogue. */
+export function externalMovies(): Movie[] {
+  return EXTERNAL_FILMS.map((f) => ({
+    ...externalFilmToMovie(f),
+    id: `ext-${f.youtubeId}`,
+    createdAt: f.publishedAt,
+    updatedAt: f.publishedAt,
+  }));
+}
+
+/** The film pinned as latest release, if any. */
+export const PINNED_LATEST = EXTERNAL_FILMS.find((f) => f.isLatestRelease) ?? null;

@@ -5,13 +5,41 @@ import {
   devFilmBySlug,
   devLatestFilm,
 } from "./dev-films";
+import { PINNED_LATEST, externalMovies } from "./external-films";
+import { upsertExternalFilms } from "./external-films-db";
 
 export type { Movie, MovieCategory };
 
 const useDevFallback = process.env.NODE_ENV !== "production";
 
+/**
+ * Once per server process, write the external films (lib/external-films.ts) into the DB and
+ * apply the pinned latest release — so a deploy fixes the database without a manual script.
+ * Failures are logged and not retried; `withExternalFilms` still covers reads.
+ */
+let externalSync: Promise<void> | null = null;
+function syncExternalFilmsOnce(): Promise<void> {
+  externalSync ??= upsertExternalFilms(prisma).catch((err) => {
+    console.warn("[movies] Could not sync external films into the database.", err);
+  });
+  return externalSync;
+}
+
+/**
+ * Read-time safety net: add external films missing from `rows` and make the pinned
+ * film the only latest release, whatever the database says.
+ */
+function withExternalFilms(rows: Movie[]): Movie[] {
+  const have = new Set(rows.map((m) => m.youtubeId).filter(Boolean));
+  const merged = [...rows, ...externalMovies().filter((m) => !have.has(m.youtubeId))];
+  const pinnedId = PINNED_LATEST?.youtubeId;
+  if (!pinnedId) return merged;
+  return merged.map((m) => ({ ...m, isLatestRelease: m.youtubeId === pinnedId }));
+}
+
 async function withDbFallback<T>(query: () => Promise<T>, fallback: () => T): Promise<T> {
   try {
+    await syncExternalFilmsOnce();
     return await query();
   } catch (err) {
     if (useDevFallback) {
@@ -25,6 +53,10 @@ async function withDbFallback<T>(query: () => Promise<T>, fallback: () => T): Pr
 export async function getLatestMovie(): Promise<Movie | null> {
   return withDbFallback(
     async () => {
+      if (PINNED_LATEST) {
+        const pinned = await prisma.movie.findUnique({ where: { youtubeId: PINNED_LATEST.youtubeId } });
+        return withExternalFilms(pinned ? [pinned] : []).find((m) => m.isLatestRelease) ?? null;
+      }
       const flagged = await prisma.movie.findFirst({
         where: { isLatestRelease: true },
         orderBy: { releaseYear: "desc" },
@@ -49,7 +81,7 @@ export async function listMovies(category?: MovieCategory): Promise<Movie[]> {
         console.warn("[movies] Database connected but empty — using dev fallback catalogue.");
         return devFilms(category);
       }
-      return rows;
+      return withExternalFilms(rows).filter((m) => !category || m.category === category);
     },
     () => devFilms(category)
   );
@@ -63,7 +95,7 @@ export async function listMoviesForLibrary(): Promise<Movie[]> {
         orderBy: { publishedAt: "asc" },
       });
       if (rows.length === 0 && useDevFallback) return devFilms();
-      return rows;
+      return withExternalFilms(rows);
     },
     () => devFilms()
   );
@@ -103,7 +135,10 @@ export async function listFilmstripMovies(limit = 10): Promise<Movie[]> {
         take: limit,
       });
       if (rows.length === 0 && useDevFallback) return fallback();
-      return rows.sort(chronological);
+      return withExternalFilms(rows)
+        .filter((m) => m.releaseYear >= FILMSTRIP_FROM_YEAR)
+        .sort(chronological)
+        .slice(-limit);
     },
     fallback
   );
@@ -111,7 +146,10 @@ export async function listFilmstripMovies(limit = 10): Promise<Movie[]> {
 
 export async function getMovieBySlug(slug: string): Promise<Movie | null> {
   return withDbFallback(
-    () => prisma.movie.findUnique({ where: { slug } }),
+    async () =>
+      (await prisma.movie.findUnique({ where: { slug } })) ??
+      externalMovies().find((m) => m.slug === slug) ??
+      null,
     () => devFilmBySlug(slug)
   );
 }
@@ -120,8 +158,10 @@ export async function getMovie(idOrSlug: string): Promise<Movie | null> {
   return withDbFallback(
     async () => {
       const bySlug = await prisma.movie.findUnique({ where: { slug: idOrSlug } });
-      if (bySlug) return bySlug;
-      return await prisma.movie.findUnique({ where: { id: idOrSlug } });
+      if (bySlug) return withExternalFilms([bySlug])[0]!;
+      const byId = await prisma.movie.findUnique({ where: { id: idOrSlug } });
+      if (byId) return withExternalFilms([byId])[0]!;
+      return externalMovies().find((m) => m.slug === idOrSlug || m.id === idOrSlug) ?? null;
     },
     () => devFilmBySlug(idOrSlug)
   );

@@ -1,6 +1,6 @@
 import type { Movie } from "@prisma/client";
 import { channelFilms } from "./channel-films";
-import { EXTERNAL_FILMS, externalFilmToMovie } from "./external-films";
+import { externalMovies } from "./external-films";
 
 /**
  * Static film catalogue used when Postgres is unavailable (local dev without Docker).
@@ -126,13 +126,7 @@ function allDevFilms(): Movie[] {
     return match ? { ...m, publishedAt: match.publishedAt } : m;
   });
   const curatedIds = new Set(DEV_FILMS.map((m) => m.youtubeId).filter(Boolean));
-  const external: Movie[] = EXTERNAL_FILMS.map((f) => ({
-    ...externalFilmToMovie(f),
-    id: `ext-${f.youtubeId}`,
-    createdAt: f.publishedAt,
-    updatedAt: f.publishedAt,
-  }));
-  return [...curated, ...channel.filter((m) => !curatedIds.has(m.youtubeId)), ...external];
+  return [...curated, ...channel.filter((m) => !curatedIds.has(m.youtubeId)), ...externalMovies()];
 }
 
 export function devFilms(category?: Movie["category"]): Movie[] {
