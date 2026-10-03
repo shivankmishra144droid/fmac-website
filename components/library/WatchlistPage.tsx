@@ -80,7 +80,7 @@ export function WatchlistPage({ movies }: { movies: Movie[] }) {
             </p>
           </div>
           {ready && watchlist.length > 0 && (
-            <p className="kicker text-bone/40 md:text-right">
+            <p className="kicker text-bone/55 md:text-right">
               <span className="block font-serif text-6xl normal-case tracking-normal text-bone">{watchlist.length}</span>
               Saved
             </p>
@@ -97,7 +97,7 @@ export function WatchlistPage({ movies }: { movies: Movie[] }) {
                   type="button"
                   onClick={() => setType(t.key)}
                   aria-pressed={on}
-                  className={`kicker relative shrink-0 pb-4 transition-colors ${on ? "text-bone" : "text-bone/40 hover:text-bone/75"}`}
+                  className={`kicker relative shrink-0 pb-4 transition-colors ${on ? "text-bone" : "text-bone/55 hover:text-bone/75"}`}
                 >
                   {t.label}
                   {on && <span className="absolute inset-x-0 -bottom-px h-px bg-beam" />}

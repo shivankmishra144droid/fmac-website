@@ -19,7 +19,7 @@ export function FrameGrid() {
 function Mark({ className }: { className: string }) {
   return (
     <span
-      className={`absolute text-[10px] leading-none text-bone/50 ${className}`}
+      className={`absolute text-[10px] leading-none text-bone/55 ${className}`}
       style={{
         transform: `translate(${className.includes("right-") ? "50%" : "-50%"}, ${
           className.includes("bottom-") ? "50%" : "-50%"

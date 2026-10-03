@@ -70,7 +70,7 @@ export function CrewReel() {
                 aria-selected={on}
                 aria-controls="crew-panel"
                 onClick={() => setIndex(i)}
-                className={`kicker relative pb-2 transition-colors ${on ? "text-bone" : "text-bone/40 hover:text-bone/75"}`}
+                className={`kicker relative pb-2 transition-colors ${on ? "text-bone" : "text-bone/55 hover:text-bone/75"}`}
               >
                 {p.year.replace("-", " – ")}
                 <span className="absolute inset-x-0 bottom-0 h-px bg-bone/15" />
@@ -85,6 +85,7 @@ export function CrewReel() {
         id="crew-panel"
         role="tabpanel"
         aria-label={`Coordinators ${current.year}`}
+        data-cursor="Swipe"
         className="relative aspect-[4/3] cursor-grab touch-pan-y select-none overflow-hidden border border-hairline bg-stage-900 active:cursor-grabbing md:aspect-[21/9]"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
@@ -136,6 +137,7 @@ export function CrewReel() {
                   type="button"
                   aria-label={b.label}
                   disabled={disabled}
+                  data-magnetic
                   // Don't let the arrow press start a swipe on the photo underneath.
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => go(index + b.dir)}

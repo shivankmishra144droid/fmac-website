@@ -1,0 +1,19 @@
+{
+  "$comment": "Source list for `npm run media:clips`. hero = ambient loop behind the home hero (WebM + MP4 + poster). previews = short hover loops for film cards. start/duration in seconds; omit start to use ~35% into the film.",
+  "hero": [
+    { "youtubeId": "wPjtR15yDME", "start": 781, "duration": 12 }
+  ],
+  "previews": [
+    { "youtubeId": "wPjtR15yDME", "start": 781 },
+    { "youtubeId": "QqpWt_h96n0" },
+    { "youtubeId": "dJFUC_qrvyg" },
+    { "youtubeId": "Z6u8Rz4CTx4" },
+    { "youtubeId": "ijtJJjmK7SQ" },
+    { "youtubeId": "G4JEwn57Z-w" },
+    { "youtubeId": "NJahD9X1i6k" },
+    { "youtubeId": "MJANSOA0OIM" },
+    { "youtubeId": "X-8QOo0FsfU" },
+    { "youtubeId": "f3YgFQUBteM" },
+    { "youtubeId": "fyRWAgOiYwA" }
+  ]
+}

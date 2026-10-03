@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { FilmDetail } from "@/components/library/FilmDetail";
-import { getMovie, listMovies } from "@/lib/movies";
-import { prisma } from "@/lib/prisma";
+import { getMovie, listAwardTitles, listMovies } from "@/lib/movies";
+import { withMedia } from "@/lib/film-media";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +27,7 @@ export default async function LibraryFilmPage({
   const movie = await getMovie(params.slug);
   if (!movie) notFound();
 
-  let awardWinner = false;
-  try {
-    const achievement = await prisma.achievement.findFirst({
-      where: { movieTitle: { equals: movie.title, mode: "insensitive" } },
-    });
-    awardWinner = Boolean(achievement);
-  } catch {
-    /* db unavailable */
-  }
+  const awardWinner = (await listAwardTitles()).includes(movie.title.toLowerCase());
 
   // Nearest films in time (same year first), excluding this one.
   const all = await listMovies();
@@ -47,5 +39,5 @@ export default async function LibraryFilmPage({
     )
     .slice(0, 8);
 
-  return <FilmDetail movie={movie} awardWinner={awardWinner} related={related} />;
+  return <FilmDetail movie={movie} awardWinner={awardWinner} related={await withMedia(related)} />;
 }

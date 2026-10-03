@@ -222,7 +222,7 @@ body:has(.editorial) {
   /* Tiny uppercase technical label (section rail, captions, meta). */
   .kicker {
     font-family: var(--font-label), ui-monospace, monospace;
-    font-size: 0.66rem;
+    font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -262,5 +262,193 @@ body:has(.editorial) {
   }
   100% {
     transform: translateY(200%);
+  }
+}
+
+/* ─── First-visit intro (markup: components/editorial/Intro.tsx) ───────────── */
+
+@property --fmac-count {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.fmac-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  background: #0b0a09;
+  color: #ece6da;
+  pointer-events: none;
+}
+html[data-intro="play"] .fmac-intro {
+  display: block;
+  /* Lift away like a curtain, then stay out of the way. */
+  animation: fmac-intro-lift 0.75s cubic-bezier(0.76, 0, 0.24, 1) 0.95s forwards;
+}
+.fmac-intro__mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(4rem, 16vw, 15rem);
+  line-height: 1;
+}
+html[data-intro="play"] .fmac-intro__mark {
+  animation: fmac-intro-mark 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.fmac-intro__meta {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  bottom: 2.25rem;
+  display: flex;
+  justify-content: space-between;
+  color: rgba(236, 230, 218, 0.55);
+}
+@media (min-width: 768px) {
+  .fmac-intro__meta {
+    left: 6rem;
+    right: 6rem;
+  }
+}
+.fmac-intro__count {
+  font-variant-numeric: tabular-nums;
+  counter-reset: fmac var(--fmac-count);
+}
+.fmac-intro__count::after {
+  content: counter(fmac, decimal-leading-zero);
+}
+html[data-intro="play"] .fmac-intro__count {
+  animation: fmac-intro-count 0.85s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.fmac-intro__bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: #f6c453;
+  transform-origin: left;
+  transform: scaleX(0);
+}
+html[data-intro="play"] .fmac-intro__bar {
+  animation: fmac-intro-bar 0.85s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes fmac-intro-lift {
+  to {
+    transform: translateY(-100%);
+    visibility: hidden;
+  }
+}
+@keyframes fmac-intro-mark {
+  from {
+    filter: blur(12px);
+    letter-spacing: 0.08em;
+  }
+  to {
+    filter: blur(0);
+    letter-spacing: -0.015em;
+  }
+}
+@keyframes fmac-intro-count {
+  to {
+    --fmac-count: 100;
+  }
+}
+@keyframes fmac-intro-bar {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Custom cursor active (components/editorial/Cursor.tsx): hide the native pointer, keep the caret. */
+html.has-cursor,
+html.has-cursor * {
+  cursor: none !important;
+}
+html.has-cursor input,
+html.has-cursor textarea,
+html.has-cursor select,
+html.has-cursor [contenteditable="true"] {
+  cursor: text !important;
+}
+
+/* ─── Poster wall cards (components/library/PosterWall.tsx) ─────────────────── */
+
+.wall-item:hover {
+  z-index: 5;
+}
+.wall-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 50%;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1);
+  /* Overshoot curve: the card "pops" forward and settles. */
+  transition:
+    transform 650ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 450ms ease,
+    filter 450ms ease;
+}
+.wall-card__frame {
+  transition:
+    box-shadow 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease;
+}
+.wall-card__img {
+  filter: brightness(0.72) saturate(0.8);
+  transition:
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms ease;
+}
+.wall-card__sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 240, 210, 0.22), transparent 55%);
+  transition: opacity 400ms ease;
+}
+.wall-card__caption {
+  transition:
+    color 300ms ease,
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) {
+  .wall-card:hover {
+    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.14);
+  }
+  .wall-card:hover .wall-card__frame {
+    border-color: rgba(246, 196, 83, 0.6);
+    box-shadow:
+      0 40px 80px -20px rgba(0, 0, 0, 0.9),
+      0 0 40px -6px rgba(246, 196, 83, 0.28);
+  }
+  .wall-card:hover .wall-card__img {
+    transform: scale(1.08);
+    filter: brightness(1) saturate(1.05);
+  }
+  .wall-card:hover .wall-card__sheen {
+    opacity: 1;
+  }
+  .wall-card:hover .wall-card__caption {
+    color: #ece6da;
+    transform: translateY(6px);
+  }
+  /* Spotlight: while one poster is up, the rest of the wall falls back. */
+  .poster-wall:has(.wall-card:hover) .wall-card:not(:hover) {
+    opacity: 0.38;
+    filter: saturate(0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wall-card,
+  .wall-card:hover {
+    transform: none !important;
   }
 }

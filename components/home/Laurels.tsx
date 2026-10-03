@@ -55,9 +55,10 @@ export function Laurels() {
                   onFocus={() => setHovered(a.id)}
                   aria-expanded={isOpen}
                   aria-controls={`laurel-${a.id}`}
+                  data-cursor={isOpen ? "Close" : "Open"}
                   className="group grid w-full grid-cols-[3.5rem_1fr_auto] items-baseline gap-x-4 gap-y-3 py-7 text-left md:grid-cols-[4.5rem_1fr_auto] md:py-9"
                 >
-                  <span className="kicker text-bone/40">{a.year}</span>
+                  <span className="kicker text-bone/55">{a.year}</span>
                   <span
                     className={`headline text-[clamp(1.9rem,3.4vw,3.2rem)] transition-[color,transform] duration-500 ease-out group-hover:translate-x-2 ${
                       featured?.id === a.id ? "text-bone" : "text-bone/55"
@@ -67,14 +68,14 @@ export function Laurels() {
                   </span>
                   <span
                     aria-hidden
-                    className={`kicker text-lg text-bone/50 transition-transform duration-500 ${isOpen ? "rotate-45" : ""}`}
+                    className={`kicker text-lg text-bone/55 transition-transform duration-500 ${isOpen ? "rotate-45" : ""}`}
                   >
                     +
                   </span>
                   <span className="kicker col-start-2 col-end-4 text-bone/55">
                     <span className="text-beam">{titleCase(a.award)}</span>
-                    <span className="mx-2 text-bone/25">/</span>
-                    <span className="text-bone/45">{titleCase(a.festival)}</span>
+                    <span className="mx-2 text-bone/55">/</span>
+                    <span className="text-bone/55">{titleCase(a.festival)}</span>
                   </span>
                 </button>
 
@@ -132,7 +133,7 @@ export function Laurels() {
             {featured && (
               <div className="mt-5 flex items-baseline justify-between gap-6">
                 <p className="headline text-3xl text-bone">{titleCase(featured.film)}</p>
-                <p className="kicker shrink-0 text-bone/40">{featured.year}</p>
+                <p className="kicker shrink-0 text-bone/55">{featured.year}</p>
               </div>
             )}
           </div>

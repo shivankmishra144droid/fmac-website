@@ -29,7 +29,7 @@ export function EditorialFooter() {
       />
 
       <div className="relative px-5 pb-8 pt-28 md:px-24 md:pt-40">
-        <p className="kicker mb-10 text-bone/50">
+        <p className="kicker mb-10 text-bone/55">
           <span className="mr-2 text-beam">✦</span>End credits
         </p>
 
@@ -54,13 +54,13 @@ export function EditorialFooter() {
 
         <div className="mt-20 grid gap-10 border-t border-hairline pt-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="kicker mb-4 text-bone/40">The club</p>
+            <p className="kicker mb-4 text-bone/55">The club</p>
             <p className="max-w-xs text-sm leading-relaxed text-bone/70">
               Film Making Club, BITS Pilani K.K. Birla Goa Campus.
             </p>
           </div>
           <div>
-            <p className="kicker mb-4 text-bone/40">Navigate</p>
+            <p className="kicker mb-4 text-bone/55">Navigate</p>
             <ul className="space-y-2">
               {NAV.map((l) => (
                 <li key={l.href}>
@@ -72,7 +72,7 @@ export function EditorialFooter() {
             </ul>
           </div>
           <div>
-            <p className="kicker mb-4 text-bone/40">Follow the reel</p>
+            <p className="kicker mb-4 text-bone/55">Follow the reel</p>
             <ul className="space-y-2">
               <li>
                 <a href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer" className="link-underline text-sm text-bone/80 hover:text-bone">
@@ -87,10 +87,11 @@ export function EditorialFooter() {
             </ul>
           </div>
           <div className="lg:text-right">
-            <p className="kicker mb-4 text-bone/40">Reel change</p>
+            <p className="kicker mb-4 text-bone/55">Reel change</p>
             <button
               type="button"
               onClick={() => scrollToTarget(0)}
+              data-magnetic
               className="kicker inline-flex items-center gap-2 border border-bone/25 px-3.5 py-2 text-bone transition-colors hover:border-beam hover:bg-beam hover:text-stage"
             >
               Back to the top ↑
@@ -98,9 +99,9 @@ export function EditorialFooter() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col gap-3 text-bone/35 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 flex flex-col gap-3 text-bone/55 sm:flex-row sm:items-center sm:justify-between">
           <p className="kicker">© {new Date().getFullYear()} FMAC</p>
-          <Link href="/admin/login" className="kicker text-bone/25 transition-colors hover:text-bone/50">
+          <Link href="/admin/login" className="kicker text-bone/55 transition-colors hover:text-bone/50">
             Team login
           </Link>
         </div>

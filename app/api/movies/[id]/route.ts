@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { movieUpdateSchema } from "@/lib/validation";
+import { invalidateMovieCache } from "@/lib/movies";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +49,7 @@ export async function PUT(req: Request, { params }: Params) {
       }
       return tx.movie.update({ where: { id: params.id }, data });
     });
+    invalidateMovieCache();
     return NextResponse.json({ movie });
   } catch (err) {
     if (
@@ -66,6 +68,7 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   try {
     await prisma.movie.delete({ where: { id: params.id } });
+    invalidateMovieCache();
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (

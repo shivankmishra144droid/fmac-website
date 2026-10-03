@@ -10,7 +10,9 @@ import { upsertExternalFilms } from "./external-films-db";
 
 export type { Movie, MovieCategory };
 
-const useDevFallback = process.env.NODE_ENV !== "production";
+/** Offline catalogue when Postgres is unreachable: always in dev; in production only when opted in (local audits). */
+const useDevFallback =
+  process.env.NODE_ENV !== "production" || process.env.FMAC_OFFLINE_CATALOGUE === "1";
 
 /**
  * Once per server process, write the external films (lib/external-films.ts) into the DB and
@@ -37,7 +39,29 @@ function withExternalFilms(rows: Movie[]): Movie[] {
   return merged.map((m) => ({ ...m, isLatestRelease: m.youtubeId === pinnedId }));
 }
 
-async function withDbFallback<T>(query: () => Promise<T>, fallback: () => T): Promise<T> {
+/**
+ * Short-lived in-memory cache for catalogue reads (production only), so most page views skip
+ * Postgres entirely. Admin writes call `invalidateMovieCache()`; anything else ages out.
+ */
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map<string, { at: number; value: Promise<unknown> }>();
+
+export function invalidateMovieCache() {
+  cache.clear();
+}
+
+async function withDbFallback<T>(key: string, query: () => Promise<T>, fallback: () => T): Promise<T> {
+  if (process.env.NODE_ENV !== "production") return runQuery(query, fallback);
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value as Promise<T>;
+  const value = runQuery(query, fallback);
+  cache.set(key, { at: Date.now(), value });
+  // Never keep a failure around.
+  value.catch(() => cache.delete(key));
+  return value;
+}
+
+async function runQuery<T>(query: () => Promise<T>, fallback: () => T): Promise<T> {
   try {
     await syncExternalFilmsOnce();
     return await query();
@@ -52,6 +76,7 @@ async function withDbFallback<T>(query: () => Promise<T>, fallback: () => T): Pr
 
 export async function getLatestMovie(): Promise<Movie | null> {
   return withDbFallback(
+    "latest",
     async () => {
       if (PINNED_LATEST) {
         const pinned = await prisma.movie.findUnique({ where: { youtubeId: PINNED_LATEST.youtubeId } });
@@ -72,6 +97,7 @@ export async function getLatestMovie(): Promise<Movie | null> {
 
 export async function listMovies(category?: MovieCategory): Promise<Movie[]> {
   return withDbFallback(
+    `list:${category ?? "all"}`,
     async () => {
       const rows = await prisma.movie.findMany({
         where: category ? { category } : undefined,
@@ -89,6 +115,7 @@ export async function listMovies(category?: MovieCategory): Promise<Movie[]> {
 
 export async function listMoviesForLibrary(): Promise<Movie[]> {
   return withDbFallback(
+    "library",
     async () => {
       const rows = await prisma.movie.findMany({
         where: { youtubeId: { not: null } },
@@ -124,6 +151,7 @@ export async function listFilmstripMovies(limit = 10): Promise<Movie[]> {
       .slice(-limit);
 
   return withDbFallback(
+    `strip:${limit}`,
     async () => {
       const rows = await prisma.movie.findMany({
         where: {
@@ -146,6 +174,7 @@ export async function listFilmstripMovies(limit = 10): Promise<Movie[]> {
 
 export async function getMovieBySlug(slug: string): Promise<Movie | null> {
   return withDbFallback(
+    `slug:${slug}`,
     async () =>
       (await prisma.movie.findUnique({ where: { slug } })) ??
       externalMovies().find((m) => m.slug === slug) ??
@@ -156,6 +185,7 @@ export async function getMovieBySlug(slug: string): Promise<Movie | null> {
 
 export async function getMovie(idOrSlug: string): Promise<Movie | null> {
   return withDbFallback(
+    `movie:${idOrSlug}`,
     async () => {
       const bySlug = await prisma.movie.findUnique({ where: { slug: idOrSlug } });
       if (bySlug) return withExternalFilms([bySlug])[0]!;
@@ -165,6 +195,31 @@ export async function getMovie(idOrSlug: string): Promise<Movie | null> {
     },
     () => devFilmBySlug(idOrSlug)
   );
+}
+
+/** Is Postgres reachable, and does it hold films? Cached with the catalogue (drives the library's status note). */
+export async function getCatalogueStatus(): Promise<{ connected: boolean; seeded: boolean }> {
+  const offline = { connected: false, seeded: false };
+  return withDbFallback(
+    "status",
+    async () => ({ connected: true, seeded: (await prisma.movie.count()) > 0 }),
+    () => offline
+  ).catch(() => offline);
+}
+
+/** Lower-cased titles of films that have an achievement (cached; empty when the DB is down). */
+export async function listAwardTitles(): Promise<string[]> {
+  return withDbFallback(
+    "award-titles",
+    async () => {
+      const rows = await prisma.achievement.findMany({
+        where: { movieTitle: { not: null } },
+        select: { movieTitle: true },
+      });
+      return rows.map((a) => a.movieTitle!.toLowerCase());
+    },
+    () => []
+  ).catch(() => []);
 }
 
 export async function isDatabaseConnected(): Promise<boolean> {

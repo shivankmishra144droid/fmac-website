@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 
 /** Muted, chromeless, looping YouTube embed URL for ambient backgrounds and previews. */
 export function ambientEmbedUrl(id: string, start = 30): string {
@@ -71,73 +71,4 @@ export function useYouTubePlaying(iframeRef: RefObject<HTMLIFrameElement>, activ
   }, [active, iframeRef]);
 
   return playing;
-}
-
-/**
- * Full-cover ambient film loop. Only mounts the iframe on desktop-class pointers,
- * when not reduced-motion, and once the container is in view (after `delayMs`).
- * Fades in over whatever poster sits beneath it once playback has really started.
- */
-export function YouTubeBackdrop({
-  youtubeId,
-  start = 30,
-  delayMs = 1200,
-  className = "",
-}: {
-  youtubeId: string;
-  start?: number;
-  delayMs?: number;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [allowed, setAllowed] = useState(false);
-  const [inView, setInView] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const playing = useYouTubePlaying(iframeRef, mounted);
-
-  useEffect(() => {
-    const ok =
-      window.matchMedia("(hover: hover) and (pointer: fine)").matches &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
-      window.innerWidth >= 768;
-    setAllowed(ok);
-  }, []);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !allowed) return;
-    const io = new IntersectionObserver(([e]) => setInView(Boolean(e?.isIntersecting)), {
-      rootMargin: "200px 0px",
-    });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [allowed]);
-
-  useEffect(() => {
-    if (!inView) {
-      setMounted(false);
-      return;
-    }
-    const t = setTimeout(() => setMounted(true), delayMs);
-    return () => clearTimeout(t);
-  }, [inView, delayMs]);
-
-  return (
-    <div ref={ref} aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
-      {mounted && (
-        <iframe
-          ref={iframeRef}
-          src={ambientEmbedUrl(youtubeId, start)}
-          title=""
-          tabIndex={-1}
-          allow="autoplay; encrypted-media"
-          // Cover-fit a 16:9 frame, oversized a touch so YouTube's edges never show.
-          className={`absolute left-1/2 top-1/2 h-[max(112%,63vw)] w-[max(112%,199vh)] -translate-x-1/2 -translate-y-1/2 transition-opacity duration-[1600ms] ${
-            playing ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      )}
-    </div>
-  );
 }

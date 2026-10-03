@@ -98,11 +98,11 @@ export function FilmDetail({
           <p className="kicker mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-bone/60">
             {select && <span className="bg-beam px-1.5 py-0.5 text-stage">{movie.isFmacSelect ? "FMAC Select" : "Award winner"}</span>}
             <span>{categoryLabel(movie)}</span>
-            <span className="text-bone/30">/</span>
+            <span className="text-bone/55">/</span>
             <span>{movie.releaseYear}</span>
             {runtime && (
               <>
-                <span className="text-bone/30">/</span>
+                <span className="text-bone/55">/</span>
                 <span>{runtime}</span>
               </>
             )}
@@ -131,7 +131,7 @@ export function FilmDetail({
                 ▶ Watch the film
               </button>
             ) : (
-              <span className="kicker border border-bone/20 px-5 py-3.5 text-bone/50">Coming soon</span>
+              <span className="kicker border border-bone/20 px-5 py-3.5 text-bone/55">Coming soon</span>
             )}
             <button
               type="button"
@@ -173,33 +173,35 @@ export function FilmDetail({
       {/* Synopsis + details */}
       <section className="grid gap-14 px-5 pt-8 md:px-24 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-24">
         <div>
-          <p className="kicker mb-6 text-bone/40">Synopsis</p>
+          <p className="kicker mb-6 text-bone/55">Synopsis</p>
           {synopsis ? (
             <p className="headline max-w-[34ch] text-[clamp(1.6rem,2.8vw,2.6rem)] leading-[1.2] text-bone/85">
               {synopsis}
             </p>
           ) : (
-            <p className="text-bone/40">No synopsis yet.</p>
+            <p className="text-bone/55">No synopsis yet.</p>
           )}
         </div>
-        <dl className="self-start border-t border-hairline">
+        <div className="self-start">
+        <dl className="border-t border-hairline">
           {details.map((d) => (
             <div key={d.k} className="flex items-baseline justify-between gap-6 border-b border-hairline py-4">
-              <dt className="kicker text-bone/40">{d.k}</dt>
+              <dt className="kicker text-bone/55">{d.k}</dt>
               <dd className="text-right text-sm text-bone/80">{d.v}</dd>
             </div>
           ))}
-          {movie.youtubeUrl && (
-            <a
-              href={movie.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="kicker mt-6 inline-block text-bone/55 transition-colors hover:text-beam"
-            >
-              Open on YouTube ↗
-            </a>
-          )}
         </dl>
+          {movie.youtubeUrl && (
+          <a
+            href={movie.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="kicker mt-6 inline-block text-bone/55 transition-colors hover:text-beam"
+          >
+            Open on YouTube ↗
+          </a>
+        )}
+        </div>
       </section>
 
       {/* More */}

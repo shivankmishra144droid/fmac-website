@@ -1,29 +1,17 @@
 import { Suspense } from "react";
 import { LibraryHome } from "@/components/library/LibraryHome";
-import { isDatabaseConnected, isDatabaseSeeded, listMovies } from "@/lib/movies";
-import { prisma } from "@/lib/prisma";
+import { getCatalogueStatus, listAwardTitles, listMovies } from "@/lib/movies";
+import { withMedia } from "@/lib/film-media";
 
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
-  const movies = await listMovies();
-  const dbConnected = await isDatabaseConnected();
-  const dbSeeded = dbConnected ? await isDatabaseSeeded() : false;
-
-  let awardTitles = new Set<string>();
-  try {
-    const achievements = await prisma.achievement.findMany({
-      where: { movieTitle: { not: null } },
-      select: { movieTitle: true },
-    });
-    awardTitles = new Set(
-      achievements
-        .map((a) => a.movieTitle?.toLowerCase())
-        .filter((t): t is string => Boolean(t))
-    );
-  } catch {
-    /* db unavailable — dev fallback films still render */
-  }
+  const [list, status, awards] = await Promise.all([listMovies(), getCatalogueStatus(), listAwardTitles()]);
+  // Cards read `media` (sharpest still + blurred placeholder) when present.
+  const movies = await withMedia(list);
+  const awardTitles = new Set(awards);
+  const dbConnected = status.connected;
+  const dbSeeded = status.seeded;
 
   return (
     <Suspense fallback={<LibraryLoading />}>

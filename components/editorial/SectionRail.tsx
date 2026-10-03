@@ -57,7 +57,7 @@ export function SectionRail() {
                 />
                 {/* Label only on hover/focus — always-on labels collide with page copy in the gutter. */}
                 <span className="kicker -translate-x-1 whitespace-nowrap bg-stage/80 px-1.5 py-0.5 text-bone/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100">
-                  <span className="mr-2 text-bone/40">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="mr-2 text-bone/55">{String(i + 1).padStart(2, "0")}</span>
                   {item.label}
                 </span>
               </button>

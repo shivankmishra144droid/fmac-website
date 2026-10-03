@@ -15,8 +15,14 @@ import {
   useAnimationFrame,
   useMotionValue,
   useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+  useVelocity,
   wrap,
+  type MotionValue,
 } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { ambientEmbedUrl, useYouTubePlaying } from "@/components/editorial/YouTubeBackdrop";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -29,7 +35,11 @@ export type FilmstripFilm = {
   year: number;
   href: string;
   thumbnailUrl: string;
+  /** Real tiny blurred still (server-made); falls back to a flat dark placeholder. */
+  blurDataURL?: string;
   youtubeId: string | null;
+  /** Self-hosted 5s loop; preferred over the YouTube embed for hover previews. */
+  previewClip?: string | null;
 };
 
 /** Cruise speed in px/s. Second row runs a touch slower for parallax. */
@@ -75,56 +85,112 @@ function useCanHover() {
 export function Filmstrip({ films }: { films: FilmstripFilm[] }) {
   const reduceMotion = useReducedMotion();
   const canHover = useCanHover();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Section is pinned for its extra height; this drives the line-by-line heading reveal.
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end end"] });
+
+  // Page scroll velocity → strips surge and lean while you scroll, then settle (eased by a spring).
+  const { scrollY } = useScroll();
+  const scrollVelocity = useSpring(useVelocity(scrollY), { damping: 50, stiffness: 300 });
 
   const rowA = useMemo(() => padFilms(films), [films]);
 
   if (films.length === 0) return null;
 
+  const pinned = !reduceMotion;
+
   return (
     <section
+      ref={sectionRef}
       id="the-reel"
       data-rail="The reel"
       aria-labelledby="filmstrip-heading"
-      className="relative bg-stage py-24 md:py-32"
+      className={`relative bg-stage ${pinned ? "h-[230vh]" : "py-24 md:py-32"}`}
     >
-      <div className="mb-12 grid gap-8 px-5 md:grid-cols-[1fr_auto] md:items-end md:px-24">
-        <div>
+      <div
+        className={
+          pinned
+            ? "sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden pt-16"
+            : ""
+        }
+      >
+        <div className="mb-10 grid gap-6 px-5 md:mb-12 md:grid-cols-[1fr_auto] md:items-end md:px-24">
           <h2
             id="filmstrip-heading"
-            className="headline text-[clamp(2.75rem,6.5vw,6.5rem)] text-bone"
+            className="headline text-[clamp(2.5rem,min(6vw,9vh),6.5rem)] text-bone"
           >
-            Made on campus,
-            <br />
-            <span className="italic text-bone/60">one frame at a time.</span>
+            <RevealLine progress={scrollYProgress} range={[0.04, 0.3]} active={pinned}>
+              Made on campus,
+            </RevealLine>
+            <RevealLine progress={scrollYProgress} range={[0.3, 0.56]} active={pinned}>
+              <span className="italic text-bone/60">one frame at a time.</span>
+            </RevealLine>
           </h2>
+          <RevealLine as="div" progress={scrollYProgress} range={[0.56, 0.72]} active={pinned}>
+            <div className="flex flex-col items-start gap-3 md:items-end">
+              <p className="kicker text-bone/55">
+                <span className="[@media(hover:none)]:hidden">Hover to preview · drag to scrub</span>
+                <span className="hidden [@media(hover:none)]:inline">Swipe to scrub · tap to watch</span>
+              </p>
+              <Link href="/library" className="kicker link-underline pb-0.5 text-bone/70 hover:text-bone">
+                The full library →
+              </Link>
+            </div>
+          </RevealLine>
         </div>
-        <div className="flex flex-col items-start gap-3 md:items-end">
-          <p className="kicker text-bone/40">
-            <span className="[@media(hover:none)]:hidden">Hover to preview · drag to scrub</span>
-            <span className="hidden [@media(hover:none)]:inline">Swipe to scrub · tap to watch</span>
-          </p>
-          <Link href="/library" className="kicker link-underline pb-0.5 text-bone/70 hover:text-bone">
-            The full library →
-          </Link>
-        </div>
-      </div>
 
-      {reduceMotion ? (
-        <StaticRow films={films} />
-      ) : (
-        <div className="flex flex-col gap-5 sm:gap-6">
-          {/* Same chronological order in both rows; row two starts half a loop in so they never line up. */}
-          <MarqueeRow films={rowA} direction={-1} speed={BASE_SPEED} canHover={canHover} />
-          <MarqueeRow
-            films={rowA}
-            startOffset={0.5}
-            direction={1}
-            speed={BASE_SPEED * 0.75}
-            canHover={canHover}
-          />
-        </div>
-      )}
+        {reduceMotion ? (
+          <StaticRow films={films} />
+        ) : (
+          <div className="flex flex-col gap-5 sm:gap-6">
+            {/* Same chronological order in both rows; row two starts half a loop in so they never line up. */}
+            <MarqueeRow
+              films={rowA}
+              direction={-1}
+              speed={BASE_SPEED}
+              canHover={canHover}
+              scrollVelocity={scrollVelocity}
+            />
+            <MarqueeRow
+              films={rowA}
+              startOffset={0.5}
+              direction={1}
+              speed={BASE_SPEED * 0.75}
+              canHover={canHover}
+              scrollVelocity={scrollVelocity}
+            />
+          </div>
+        )}
+      </div>
     </section>
+  );
+}
+
+/** One heading line that rises, sharpens and fades in across `range` of the pinned scroll. */
+function RevealLine({
+  children,
+  progress,
+  range,
+  active,
+  as = "span",
+}: {
+  /** "span" inside the heading (phrasing content only); "div" elsewhere. */
+  as?: "span" | "div";
+  children: React.ReactNode;
+  progress: MotionValue<number>;
+  range: [number, number];
+  active: boolean;
+}) {
+  const opacity = useTransform(progress, range, [0, 1]);
+  const y = useTransform(progress, range, ["0.6em", "0em"]);
+  const filter = useTransform(progress, range, ["blur(8px)", "blur(0px)"]);
+
+  const Tag = as === "div" ? motion.div : motion.span;
+  return (
+    <Tag className="block" style={active ? { opacity, y, filter } : undefined}>
+      {children}
+    </Tag>
   );
 }
 
@@ -138,6 +204,7 @@ function MarqueeRow({
   speed,
   canHover,
   startOffset = 0,
+  scrollVelocity,
 }: {
   films: FilmstripFilm[];
   direction: 1 | -1;
@@ -145,10 +212,16 @@ function MarqueeRow({
   canHover: boolean;
   /** Fraction of one loop to start scrolled by. */
   startOffset?: number;
+  /** Smoothed page scroll velocity (px/s). */
+  scrollVelocity: MotionValue<number>;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
+  // Lean into the scroll: up to ±5° while scrolling hard, back to flat at rest.
+  const skewX = useTransform(scrollVelocity, [-3000, 0, 3000], [5 * direction, 0, -5 * direction], {
+    clamp: true,
+  });
 
   /** Width of one copy of the films; the track holds two, and x wraps within [-loopWidth, 0). */
   const loopWidth = useRef(0);
@@ -208,7 +281,10 @@ function MarqueeRow({
     flingVelocity.current *= Math.pow(0.04, dt);
     if (Math.abs(flingVelocity.current) < 1) flingVelocity.current = 0;
 
-    const next = x.get() + (direction * speed * speedFactor.current + flingVelocity.current) * dt;
+    // Scroll surge: up to 5× cruise while the page is moving fast, in the row's own direction.
+    const surge = Math.min(5, Math.abs(scrollVelocity.get()) / 600);
+    const next =
+      x.get() + (direction * speed * (speedFactor.current + surge) + flingVelocity.current) * dt;
     x.set(wrap(-w, 0, next));
   });
 
@@ -225,6 +301,7 @@ function MarqueeRow({
     };
     flingVelocity.current = 0;
     suppressClick.current = false;
+    rowRef.current?.removeAttribute("data-dragged");
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -255,6 +332,8 @@ function MarqueeRow({
     d.active = false;
     if (d.moved) {
       suppressClick.current = true;
+      // Tells the page-transition click handler this "click" was the end of a drag.
+      rowRef.current?.setAttribute("data-dragged", "1");
       flingVelocity.current = Math.max(-2400, Math.min(2400, d.velocity));
       if (e.currentTarget.hasPointerCapture(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId);
@@ -268,6 +347,7 @@ function MarqueeRow({
       e.stopPropagation();
       suppressClick.current = false;
     }
+    rowRef.current?.removeAttribute("data-dragged");
   };
 
   const doubled = useMemo(() => [...films, ...films], [films]);
@@ -275,6 +355,7 @@ function MarqueeRow({
   return (
     <div
       ref={rowRef}
+      data-cursor="Drag"
       className="filmstrip-mask relative cursor-grab select-none overflow-hidden active:cursor-grabbing"
       style={{ touchAction: "pan-y" }}
       onPointerEnter={(e) => {
@@ -290,7 +371,7 @@ function MarqueeRow({
       onClickCapture={onClickCapture}
       onDragStart={(e) => e.preventDefault()}
     >
-      <motion.div ref={trackRef} className="flex w-max" style={{ x }}>
+      <motion.div ref={trackRef} className="flex w-max" style={{ x, skewX }}>
         {doubled.map((film, i) => (
           <FilmCard
             key={`${film.id}-${i}`}
@@ -321,9 +402,13 @@ function FilmCard({
   clone: boolean;
   priority: boolean;
 }) {
+  const router = useRouter();
   const [previewing, setPreviewing] = useState(false);
+  const [clipPlaying, setClipPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const previewReady = useYouTubePlaying(iframeRef, previewing);
+  const useClip = Boolean(film.previewClip);
+  const ytReady = useYouTubePlaying(iframeRef, previewing && !useClip);
+  const previewReady = useClip ? clipPlaying : ytReady;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = () => {
@@ -334,6 +419,8 @@ function FilmCard({
   useEffect(() => clearTimer, []);
 
   const startPreview = () => {
+    // Warm the film page so the click lands instantly.
+    router.prefetch(film.href);
     if (!canHover || !film.youtubeId) return;
     clearTimer();
     timer.current = setTimeout(() => setPreviewing(true), PREVIEW_DELAY_MS);
@@ -342,6 +429,7 @@ function FilmCard({
   const stopPreview = () => {
     clearTimer();
     setPreviewing(false);
+    setClipPlaying(false);
   };
 
   return (
@@ -349,8 +437,12 @@ function FilmCard({
     <div className="shrink-0 pr-4 sm:pr-5" aria-hidden={clone || undefined}>
       <Link
         href={film.href}
+        // Hover prefetches; skip Next's viewport prefetch (dozens of cards would each hit the server).
+        prefetch={false}
         tabIndex={clone ? -1 : undefined}
         draggable={false}
+        data-cursor="Watch"
+        data-transition-title={film.title}
         onPointerEnter={startPreview}
         onPointerLeave={stopPreview}
         onFocus={startPreview}
@@ -365,12 +457,26 @@ function FilmCard({
             sizes="(max-width: 640px) 68vw, 360px"
             priority={priority}
             placeholder="blur"
-            blurDataURL={BLUR_DATA_URL}
+            blurDataURL={film.blurDataURL ?? BLUR_DATA_URL}
             draggable={false}
             className="object-cover brightness-[0.8] saturate-[0.85] transition-[transform,filter] duration-500 ease-out group-hover:scale-[1.04] group-hover:brightness-100 group-hover:saturate-100"
           />
 
-          {previewing && film.youtubeId ? (
+          {previewing && film.previewClip ? (
+            <video
+              src={film.previewClip}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              aria-hidden
+              onPlaying={() => setClipPlaying(true)}
+              className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                clipPlaying ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ) : previewing && film.youtubeId ? (
             <iframe
               ref={iframeRef}
               src={ambientEmbedUrl(film.youtubeId, PREVIEW_START_S)}
@@ -392,9 +498,9 @@ function FilmCard({
           </span>
         </div>
 
-        <p className="kicker mt-3 flex gap-2 text-bone/50 transition-colors group-hover:text-bone">
+        <p className="kicker mt-3 flex gap-2 text-bone/55 transition-colors group-hover:text-bone">
           <span className="truncate">{film.title}</span>
-          <span className="shrink-0 text-bone/30">· {film.year}</span>
+          <span className="shrink-0 text-bone/55">· {film.year}</span>
         </p>
       </Link>
     </div>

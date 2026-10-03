@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/session";
 import { movieCreateSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { devFilms } from "@/lib/dev-films";
+import { invalidateMovieCache } from "@/lib/movies";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
     }
     return tx.movie.create({ data: { ...data, slug } });
   });
+  invalidateMovieCache();
 
   return NextResponse.json({ movie }, { status: 201 });
 }

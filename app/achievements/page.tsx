@@ -65,7 +65,7 @@ export default async function AchievementsPage() {
               key={a.id}
               className="grid gap-4 border-b border-hairline py-10 md:grid-cols-[5rem_1fr_1fr] md:gap-10 md:py-14"
             >
-              <p className="kicker text-bone/40">
+              <p className="kicker text-bone/55">
                 {String(i + 1).padStart(2, "0")}
                 <span className="mt-1 block text-bone/60">{a.year}</span>
               </p>
@@ -74,7 +74,7 @@ export default async function AchievementsPage() {
                   <h2 className="headline text-[clamp(2.25rem,4.5vw,4.25rem)] text-bone">{a.movieTitle}</h2>
                 )}
                 <p className="kicker mt-4 text-beam">{a.title}</p>
-                {a.laurel && <p className="kicker mt-1 text-bone/45">{a.laurel}</p>}
+                {a.laurel && <p className="kicker mt-1 text-bone/55">{a.laurel}</p>}
               </div>
               {a.description && (
                 <p className="max-w-lg self-end text-base leading-relaxed text-bone/65">{a.description}</p>

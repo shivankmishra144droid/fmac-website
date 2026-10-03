@@ -42,7 +42,12 @@ export function ManifestoPinned() {
         } flex flex-col justify-center px-5 pt-16 md:px-24`}
       >
 
-        <p className="headline max-w-[22ch] text-[clamp(2rem,min(5.2vw,8vh),5.2rem)] leading-[1.04]">
+        {/* One readable sentence for assistive tech; the word-by-word light-up below is visual only. */}
+        <p className="sr-only">{TOKENS.map((t) => t.text).join(" ")}</p>
+        <p
+          aria-hidden
+          className="headline max-w-[22ch] text-[clamp(2rem,min(5.2vw,8vh),5.2rem)] leading-[1.04]"
+        >
           {TOKENS.map((t, i) => (
             <Word
               key={i}
@@ -52,11 +57,6 @@ export function ManifestoPinned() {
               static={Boolean(reduce)}
             />
           ))}
-        </p>
-
-        <p className="mt-14 max-w-md text-sm leading-relaxed text-bone/55">
-          A collective of actors, writers, editors and dreamers at BITS Pilani K.K. Birla Goa
-          Campus, turning the everyday into the cinematic.
         </p>
       </div>
     </section>

@@ -8,6 +8,7 @@ import { INSTAGRAM_URL, YOUTUBE_URL } from "@/components/SocialNavIcons";
 
 const LINKS = [
   { href: "/library", label: "Films" },
+  { href: "/library/wall", label: "Wall" },
   { href: "/library/watchlist", label: "Watchlist" },
   { href: "/achievements", label: "Laurels" },
 ];
@@ -40,7 +41,9 @@ export function EditorialNav() {
   // "/library" shouldn't light up while on its own sub-page "/library/watchlist".
   const isActive = (href: string) =>
     href === "/library"
-      ? pathname.startsWith("/library") && !pathname.startsWith("/library/watchlist")
+      ? pathname.startsWith("/library") &&
+        !pathname.startsWith("/library/watchlist") &&
+        !pathname.startsWith("/library/wall")
       : pathname.startsWith(href);
 
   return (
@@ -72,6 +75,7 @@ export function EditorialNav() {
             ))}
             <Link
               href="/library"
+              data-magnetic
               className="kicker group inline-flex items-center gap-2 border border-bone/25 px-3.5 py-2 text-bone transition-colors hover:border-beam hover:bg-beam hover:text-stage"
             >
               Watch
@@ -127,7 +131,7 @@ export function EditorialNav() {
                     onClick={() => setOpen(false)}
                     className="flex items-baseline gap-4 py-1"
                   >
-                    <span className="kicker text-bone/35">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="kicker text-bone/55">{String(i + 1).padStart(2, "0")}</span>
                     <span className="headline text-6xl text-bone">{l.label}</span>
                   </Link>
                 </motion.li>

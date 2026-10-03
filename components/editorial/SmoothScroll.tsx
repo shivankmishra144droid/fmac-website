@@ -18,6 +18,12 @@ export function scrollToTarget(target: HTMLElement | number, offset = 0) {
   window.scrollTo({ top, behavior: "smooth" });
 }
 
+/** Jump to the top with no easing (used behind the page-transition curtain). */
+export function scrollToTopInstant() {
+  if (instance) instance.scrollTo(0, { immediate: true, force: true });
+  else window.scrollTo(0, 0);
+}
+
 /** Weighted, inertial page scroll (Lenis). Skipped under reduced motion. */
 export function SmoothScroll() {
   useEffect(() => {

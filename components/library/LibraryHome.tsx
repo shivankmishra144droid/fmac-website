@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useTransition } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Movie } from "@prisma/client";
 import { motion, useReducedMotion } from "framer-motion";
@@ -86,8 +87,16 @@ export function LibraryHome({ movies, awardTitles, dbConnected, dbSeeded }: Libr
             <p className="mt-8 max-w-xl text-base leading-relaxed text-bone/60 md:text-lg">
               Every FMAC film, grouped by tenure. Each year opens with its Aaja.
             </p>
+            <Link
+              href="/library/wall"
+              data-magnetic
+              className="kicker group mt-8 inline-flex items-center gap-3 border border-bone/30 px-5 py-3.5 text-bone transition-colors hover:border-beam hover:bg-beam hover:text-stage"
+            >
+              Explore the poster wall
+              <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+            </Link>
           </div>
-          <p className="kicker text-bone/40 md:text-right">
+          <p className="kicker text-bone/55 md:text-right">
             <span className="block font-serif text-6xl normal-case tracking-normal text-bone">
               {published.length}
             </span>
@@ -109,7 +118,7 @@ export function LibraryHome({ movies, awardTitles, dbConnected, dbSeeded }: Libr
                 onClick={() => selectCategory(t.slug)}
                 aria-current={on ? "page" : undefined}
                 className={`kicker relative shrink-0 pb-4 transition-colors ${
-                  on ? "text-bone" : "text-bone/40 hover:text-bone/75"
+                  on ? "text-bone" : "text-bone/55 hover:text-bone/75"
                 }`}
               >
                 {t.label}
@@ -126,15 +135,15 @@ export function LibraryHome({ movies, awardTitles, dbConnected, dbSeeded }: Libr
         </nav>
 
         {dbConnected === false && (
-          <p className="kicker mt-6 text-bone/30">Offline catalogue · database not connected</p>
+          <p className="kicker mt-6 text-bone/55">Offline catalogue · database not connected</p>
         )}
         {dbConnected === true && dbSeeded === false && (
-          <p className="kicker mt-6 text-bone/30">Database is empty · run npm run db:seed</p>
+          <p className="kicker mt-6 text-bone/55">Database is empty · run npm run db:seed</p>
         )}
       </header>
 
       {movies.length === 0 ? (
-        <p className="px-5 py-24 text-center text-bone/50 md:px-24">No films synced yet.</p>
+        <p className="px-5 py-24 text-center text-bone/55 md:px-24">No films synced yet.</p>
       ) : (
         <>
           {activeCategory ? (
@@ -177,7 +186,7 @@ function TenureRow({
         <h2 id={`${id}-h`} className="headline text-[clamp(2.25rem,4.5vw,4rem)] text-bone">
           {tenureTitle(group)}
         </h2>
-        <p className="kicker shrink-0 pb-2 text-bone/40">
+        <p className="kicker shrink-0 pb-2 text-bone/55">
           {group.films.length} {group.films.length === 1 ? "film" : "films"}
         </p>
       </div>
@@ -211,12 +220,12 @@ function CategoryGrid({
     <section>
       <div className="mb-10 flex items-end justify-between gap-6">
         <h2 className="headline text-[clamp(2.25rem,4.5vw,4rem)] text-bone">{category.label}</h2>
-        <p className="kicker shrink-0 pb-2 text-bone/40">
+        <p className="kicker shrink-0 pb-2 text-bone/55">
           {movies.length} {movies.length === 1 ? "film" : "films"}
         </p>
       </div>
       {movies.length === 0 ? (
-        <p className="py-16 text-center text-bone/40">No films in this category yet.</p>
+        <p className="py-16 text-center text-bone/55">No films in this category yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
           {movies.map((movie, i) => (
