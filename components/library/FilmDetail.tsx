@@ -70,7 +70,7 @@ export function FilmDetail({
           <div
             aria-hidden
             className="absolute inset-0 -z-10"
-            style={src === frame ? { transform: "scale(1.36)" } : undefined}
+            style={src === frame ? { transform: "scale(1.5)" } : undefined}
           >
             <Image
               src={src}
@@ -87,6 +87,8 @@ export function FilmDetail({
           </div>
         )}
         <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-stage via-stage/55 to-stage/40" />
+        {/* Solid floor hides burnt-in subtitles on auto-generated frames. */}
+        <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-gradient-to-t from-stage from-35% to-transparent" />
 
         <div className="px-5 pb-16 pt-36 md:px-24 md:pb-20">
           <Link href="/library" className="kicker link-underline mb-10 inline-block pb-0.5 text-bone/55 hover:text-bone">

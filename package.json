@@ -16,6 +16,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "sync:youtube": "tsx scripts/sync-youtube.ts",
     "test:tenure": "tsx scripts/test-tenure.ts",
+    "films:external": "tsx scripts/add-external-films.ts",
     "fetch:youtube": "yt-dlp --flat-playlist --dump-json \"https://www.youtube.com/c/FilmmakingClubBITSGoa/videos\" > youtube-channel.jsonl",
     "postinstall": "prisma generate"
   },

@@ -23,6 +23,7 @@ import {
 import { parseYtDlpJsonl, cleanMovieTitle, youtubeWatchUrl, youtubeThumbnail, isBrokenYoutubeThumbnail } from "../lib/youtube";
 import { buildSynopsis, SYNOPSIS_FALLBACK } from "../lib/synopsis";
 import { uniqueSlug } from "../lib/slug";
+import { upsertExternalFilms } from "../lib/external-films-db";
 import { filterTenuresFrom2022, formatTenureLabel, groupMoviesByTenure, reportMissingAajaMarkers } from "../lib/tenure";
 import {
   isAajaTitle,
@@ -252,6 +253,9 @@ async function main() {
         data: { isLatestRelease: true },
       });
     }
+    // Collaboration films aren't on the FMAC channel; re-add them and let a pinned latest win.
+    console.log("External films:");
+    await upsertExternalFilms(prisma);
   }
 
   const synced = dryRun

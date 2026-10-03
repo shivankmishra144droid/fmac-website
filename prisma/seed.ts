@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { readFileSync, existsSync } from "fs";
 import path from "path";
 import { uniqueSlug } from "../lib/slug";
+import { upsertExternalFilms } from "../lib/external-films-db";
 import {
   channelVideoToMovie,
   findChannelVideo,
@@ -118,16 +119,9 @@ async function main() {
     );
   }
 
-  const latest = await prisma.movie.findFirst({
-    where: { title: { equals: "Portrait of My Grandfather", mode: "insensitive" } },
-  });
-  if (latest) {
-    await prisma.movie.updateMany({ data: { isLatestRelease: false } });
-    await prisma.movie.update({
-      where: { id: latest.id },
-      data: { isLatestRelease: true, releaseYear: 2026 },
-    });
-  }
+  // Collaboration films on other channels; also pins the latest release (lib/external-films.ts).
+  console.log("\nExternal films:");
+  await upsertExternalFilms(prisma);
 
   const achievements = [
     {

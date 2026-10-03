@@ -216,7 +216,6 @@ export const PRIORITY_FILM_OVERRIDES: PriorityFilmOverride[] = [
     displayTitle: "Portrait of My Grandfather",
     releaseYear: 2026,
     category: "SHORT",
-    isLatestRelease: true,
     isFmacSelect: true,
     tagline: "A slice-of-life drama about memory, family, and the stories we inherit.",
     description:

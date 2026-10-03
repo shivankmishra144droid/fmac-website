@@ -17,7 +17,7 @@ export type FocusHeroFilm = {
   /** Best-quality still; may 404 on older uploads, so `fallbackImage` is tried next. */
   image: string | null;
   fallbackImage: string | null;
-  /** `image` is a 2.39:1 frame inside 16:9 — zoom past the black bars. */
+  /** `image` is a letterboxed frame inside 16:9 — zoom past the black bars (and any burnt-in subtitles). */
   letterboxed?: boolean;
 };
 
@@ -58,7 +58,7 @@ export function FocusHero({ film }: { film: FocusHeroFilm }) {
         {src && (
           <div
             className="absolute inset-0"
-            style={film.letterboxed && src === film.image ? { transform: "scale(1.36)" } : undefined}
+            style={film.letterboxed && src === film.image ? { transform: "scale(1.5)" } : undefined}
           >
           <Image
             src={src}
@@ -79,6 +79,8 @@ export function FocusHero({ film }: { film: FocusHeroFilm }) {
         {film.youtubeId && <YouTubeBackdrop youtubeId={film.youtubeId} start={30} delayMs={2600} />}
         {/* Grade: lift the type off the image, sink the edges. */}
         <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/45 to-stage/65" />
+        {/* Solid floor: auto-generated frames often carry burnt-in subtitles along the bottom. */}
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-stage from-35% to-transparent" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(11,10,9,0.75)_100%)]" />
       </motion.div>
 

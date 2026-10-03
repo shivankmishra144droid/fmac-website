@@ -1,5 +1,6 @@
 import type { Movie } from "@prisma/client";
 import { channelFilms } from "./channel-films";
+import { EXTERNAL_FILMS, externalFilmToMovie } from "./external-films";
 
 /**
  * Static film catalogue used when Postgres is unavailable (local dev without Docker).
@@ -25,7 +26,7 @@ export const DEV_FILMS: Movie[] = [
     runtimeSeconds: 583,
     format: "Digital · YouTube",
     crew: "Film Making Club, BITS Goa",
-    isLatestRelease: true,
+    isLatestRelease: false,
     isFmacSelect: true,
     isAajaFilm: false,
     contentType: "FILM",
@@ -125,7 +126,13 @@ function allDevFilms(): Movie[] {
     return match ? { ...m, publishedAt: match.publishedAt } : m;
   });
   const curatedIds = new Set(DEV_FILMS.map((m) => m.youtubeId).filter(Boolean));
-  return [...curated, ...channel.filter((m) => !curatedIds.has(m.youtubeId))];
+  const external: Movie[] = EXTERNAL_FILMS.map((f) => ({
+    ...externalFilmToMovie(f),
+    id: `ext-${f.youtubeId}`,
+    createdAt: f.publishedAt,
+    updatedAt: f.publishedAt,
+  }));
+  return [...curated, ...channel.filter((m) => !curatedIds.has(m.youtubeId)), ...external];
 }
 
 export function devFilms(category?: Movie["category"]): Movie[] {
@@ -142,5 +149,5 @@ export function devFilmBySlug(slug: string): Movie | null {
 }
 
 export function devLatestFilm(): Movie | null {
-  return DEV_FILMS.find((m) => m.isLatestRelease) ?? DEV_FILMS[0] ?? null;
+  return allDevFilms().find((m) => m.isLatestRelease) ?? DEV_FILMS[0] ?? null;
 }
